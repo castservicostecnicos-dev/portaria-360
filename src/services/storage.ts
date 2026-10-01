@@ -47,6 +47,7 @@ import {
   SEED_CCTV_CAMERAS,
   SEED_COMMUNICATION_NOTICES,
 } from '../data/seedData';
+import { firestoreSync } from './firestoreSync';
 
 const STORAGE_KEYS = {
   CONDO: 'portaria360_condo',
@@ -268,6 +269,7 @@ class StorageService {
       this.addAuditLog('Cadastro de Condomínio', 'Dev Master', `Novo condomínio ${condo.name} e ADM Predial ${condo.admPredial.name} cadastrados`);
     }
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
+    firestoreSync.syncClientCondo(condo);
 
     // Sync ADM Predial into Users table so they can log in immediately
     if (condo.admPredial && condo.admPredial.email) {
@@ -302,6 +304,7 @@ class StorageService {
         users.push(admUser);
       }
       this.setItem(STORAGE_KEYS.USERS, users);
+      firestoreSync.syncUser(admUser);
     }
   }
 
@@ -310,6 +313,7 @@ class StorageService {
     const target = list.find((c) => c.id === condoId);
     const updated = list.filter((c) => c.id !== condoId);
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, updated);
+    firestoreSync.deleteClientCondo(condoId);
     if (target) {
       this.addAuditLog('Exclusão de Condomínio', 'Dev Master', `Condomínio ${target.name} removido da plataforma`);
     }
@@ -409,6 +413,7 @@ class StorageService {
   public saveCondo(config: CondoConfig) {
     this.setItem(STORAGE_KEYS.CONDO, config);
     this.addAuditLog('Configuração do Condomínio', 'Condomínio', `Dados do condomínio ${config.name} atualizados`);
+    firestoreSync.syncCondo(config);
   }
 
   // Blocks
@@ -691,6 +696,7 @@ class StorageService {
     if (idx >= 0) list[idx] = camera;
     else list.push(camera);
     this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list);
+    firestoreSync.syncCCTVCamera(camera);
     this.addAuditLog('Câmera CFTV', 'Segurança', `Câmera ${camera.name} (${camera.location}) configurada`);
   }
 
@@ -698,6 +704,7 @@ class StorageService {
     const list = this.getCCTVCameras();
     const target = list.find((c) => c.id === id);
     this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list.filter((c) => c.id !== id));
+    firestoreSync.deleteCCTVCamera(id);
     if (target) {
       this.addAuditLog('Câmera CFTV Removida', 'Segurança', `Câmera ${target.name} removida`);
     }

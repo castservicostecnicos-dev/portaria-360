@@ -75,6 +75,77 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
   // Toast Feedback
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
 
+  // Live Auto-Refresh Tick (updates DDNS camera feeds smoothly)
+  const [liveTick, setLiveTick] = useState(Date.now());
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    message?: string;
+    error?: string;
+    latencyMs?: number;
+    troubleshooting?: string[];
+  } | null>(null);
+
+  // Resolve camera stream URL through HTTPS proxy to bypass mixed content & CORS
+  const resolveCameraStreamUrl = (cam: CCTVCamera, tick: number): string => {
+    if (!cam) return '/src/assets/images/cctv_entrance_gate_1790763519317.jpg';
+
+    // If native video stream (.mp4 or .m3u8), return streamUrl
+    if (cam.streamUrl && (cam.streamUrl.endsWith('.m3u8') || cam.streamUrl.endsWith('.mp4'))) {
+      return cam.streamUrl;
+    }
+
+    // If camera is bound to a DVR Host / DDNS
+    const host = cam.dvrHost || cam.ipAddress;
+    if (host && (host.includes('.') || host.includes('ddns') || host.includes('intelbras') || host.includes(':'))) {
+      const channel = cam.dvrChannel || 1;
+      const port = '8080';
+      return `/api/cctv/snapshot?host=${encodeURIComponent(host)}&channel=${channel}&port=${port}&t=${tick}`;
+    }
+
+    // If snapshotUrl is HTTP (would trigger browser mixed-content block on HTTPS)
+    if (cam.snapshotUrl?.startsWith('http://')) {
+      return `/api/cctv/snapshot?url=${encodeURIComponent(cam.snapshotUrl)}&t=${tick}`;
+    }
+
+    return cam.snapshotUrl || '/src/assets/images/cctv_entrance_gate_1790763519317.jpg';
+  };
+
+  const handleTestConnection = async () => {
+    if (!dvrHost.trim()) {
+      triggerFeedback('Informe o endereço DDNS ou IP do DVR para testar.', 'info');
+      return;
+    }
+    setIsTestingConnection(true);
+    setTestResult(null);
+
+    try {
+      const res = await fetch('/api/cctv/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: dvrHost.trim(),
+          port: dvrHttpPort.trim() || '8080',
+          channel: dvrChannel || 1,
+          user: dvrUser.trim() || 'admin',
+          pass: dvrPass.trim(),
+        }),
+      });
+      const data = await res.json();
+      setTestResult(data);
+      if (data.ok) {
+        triggerFeedback('Conexão com DVR Intelbras bem-sucedida!');
+      }
+    } catch (err: any) {
+      setTestResult({
+        ok: false,
+        error: 'Erro de comunicação com o servidor de proxy: ' + err.message,
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
   const refreshCameras = () => {
     const list = storage.getCCTVCameras();
     setCameras(list);
@@ -95,9 +166,15 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
       );
     }, 1000);
 
+    // Refresh live camera frames periodically
+    const feedTimer = setInterval(() => {
+      setLiveTick(Date.now());
+    }, 3500);
+
     return () => {
       unsub();
       clearInterval(timer);
+      clearInterval(feedTimer);
     };
   }, []);
 
@@ -402,23 +479,13 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
                 playsInline
                 className="w-full h-full object-cover"
               />
-            ) : selectedCamera.snapshotUrl ? (
+            ) : (
               <img
-                src={selectedCamera.snapshotUrl}
+                src={resolveCameraStreamUrl(selectedCamera, liveTick)}
                 alt={selectedCamera.name}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-slate-500 p-6 text-center">
-                <Video className="w-14 h-14 mb-2 text-sky-400 animate-pulse" />
-                <span className="text-xs font-mono font-semibold text-slate-300">
-                  CONECTANDO AO CANAL {selectedCamera.dvrChannel || 1} DO DVR ({selectedCamera.ipAddress || 'Intelbras'})...
-                </span>
-                <p className="text-[11px] text-slate-500 mt-1 max-w-md">
-                  Verifique se o DDNS está ativo ou configure o stream HLS/WebRTC nas opções da câmera.
-                </p>
-              </div>
             )}
 
             {/* Live Security HUD Overlay */}
@@ -573,18 +640,16 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
                   playsInline
                   className="w-full h-full object-cover"
                 />
-              ) : cam.snapshotUrl ? (
+              ) : (
                 <img
-                  src={cam.snapshotUrl}
+                  src={resolveCameraStreamUrl(cam, liveTick)}
                   alt={cam.name}
                   className="w-full h-full object-cover opacity-90"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/src/assets/images/cctv_entrance_gate_1790763519317.jpg';
+                  }}
                 />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-950">
-                  <Video className="w-8 h-8 mb-1 opacity-40 text-sky-400" />
-                  <span className="text-[11px] font-mono font-medium">CANAL {cam.dvrChannel || 1} · DVR</span>
-                </div>
               )}
 
               {/* Header HUD */}
@@ -1082,6 +1147,62 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
                     <span className="text-[11px] font-mono text-amber-300 break-all select-all">
                       rtsp://{dvrUser}:{dvrPass ? '••••••' : '[senha]'}@{dvrHost || '[host]'}:{dvrRtspPort}/cam/realmonitor?channel={dvrChannel}&subtype={subStream ? 1 : 0}
                     </span>
+                  </div>
+
+                  {/* Interactive Realtime DDNS Connection Tester */}
+                  <div className="p-3 bg-slate-900/90 rounded-xl border border-sky-900/60 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-white block">Diagnóstico de Conexão com o DVR</span>
+                        <span className="text-[10px] text-slate-400">Testa a resposta real do DDNS Intelbras e da porta HTTP</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={isTestingConnection}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow self-start sm:self-auto shrink-0"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isTestingConnection ? 'animate-spin' : ''}`} />
+                        <span>{isTestingConnection ? 'Testando Conexão...' : 'Testar DDNS Intelbras'}</span>
+                      </button>
+                    </div>
+
+                    {testResult && (
+                      <div className={`p-3 rounded-lg border text-xs space-y-1.5 animate-fadeIn ${
+                        testResult.ok
+                          ? 'bg-emerald-950/80 border-emerald-600 text-emerald-200'
+                          : 'bg-rose-950/80 border-rose-700 text-rose-200'
+                      }`}>
+                        <div className="flex items-center gap-2 font-bold">
+                          {testResult.ok ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                          )}
+                          <span>{testResult.ok ? 'Sucesso! Câmera conectada e respondendo.' : 'Aviso na Conexão com o DVR'}</span>
+                          {testResult.latencyMs && (
+                            <span className="text-[10px] font-mono bg-emerald-900 px-1.5 py-0.5 rounded text-emerald-300 ml-auto">
+                              {testResult.latencyMs}ms
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] leading-relaxed">
+                          {testResult.ok ? testResult.message : testResult.error}
+                        </p>
+
+                        {testResult.troubleshooting && (
+                          <div className="pt-1.5 border-t border-rose-900/60 space-y-1">
+                            <span className="text-[10px] font-bold text-rose-300 block">Dicas para fazer funcionar:</span>
+                            <ul className="list-disc list-inside text-[10px] text-slate-300 space-y-0.5">
+                              {testResult.troubleshooting.map((tip, idx) => (
+                                <li key={idx}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
