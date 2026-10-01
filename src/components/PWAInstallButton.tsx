@@ -47,7 +47,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ className = 
         title="Instalar Portaria360 no computador ou celular (PWA)"
       >
         <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-        <span>{variant === 'full' ? 'Instalar App Portaria360' : 'Instalar App'}</span>
+        <span className={variant === 'full' ? 'inline' : 'hidden sm:inline'}>
+          {variant === 'full' ? 'Instalar App Portaria360' : 'Instalar App'}
+        </span>
       </button>
 
       {/* iOS Installation Instructions Modal */}

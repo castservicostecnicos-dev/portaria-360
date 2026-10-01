@@ -432,12 +432,16 @@ export interface CCTVCamera {
   status: 'online' | 'offline' | 'manutencao';
   streamUrl?: string;
   externalViewerUrl?: string;
-  feedType: 'hls_stream' | 'rtsp_proxy' | 'external_dvr' | 'simulated_live';
+  rtspUrl?: string;
   snapshotUrl?: string;
+  feedType: 'hls_stream' | 'rtsp_proxy' | 'external_dvr' | 'simulated_live' | 'mjpeg_stream' | 'video_file';
   brand: string;
   ipAddress?: string;
   resolution: string;
   recordingRefPrefix?: string;
+  dvrChannel?: number;
+  dvrHost?: string;
+  subStream?: boolean;
 }
 
 export type NoticeCategory = 'geral' | 'manutencao' | 'evento' | 'seguranca' | 'urgencia';

@@ -125,65 +125,65 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <span className="text-[11px] text-slate-500">Operação em 1 clique</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
           {/* Action 1: Registrar Entrada */}
           <button
             onClick={onOpenQuickEntryModal}
-            className="flex flex-col items-center justify-center p-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-emerald-950/30 transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-emerald-950/30 transition-all group min-w-0 text-center"
           >
-            <ShieldCheck className="w-6 h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
+            <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Registrar Entrada</span>
-            <span className="text-[10px] text-emerald-100 opacity-80">Pessoa / Veículo</span>
+            <span className="text-[10px] text-emerald-100 opacity-80 truncate w-full">Pessoa / Veículo</span>
           </button>
 
           {/* Action 2: Registrar Saída */}
           <button
             onClick={onOpenQuickExitModal}
-            className="flex flex-col items-center justify-center p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
           >
-            <LogOut className="w-6 h-6 mb-1 text-amber-400 group-hover:scale-110 transition-transform" />
+            <LogOut className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-amber-400 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Registrar Saída</span>
-            <span className="text-[10px] text-slate-400">Baixa rápida</span>
+            <span className="text-[10px] text-slate-400 truncate w-full">Baixa rápida</span>
           </button>
 
           {/* Action 3: Nova Encomenda */}
           <button
             onClick={onOpenQuickDeliveryModal}
-            className="flex flex-col items-center justify-center p-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
           >
-            <Package className="w-6 h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
+            <Package className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Nova Encomenda</span>
-            <span className="text-[10px] text-indigo-100 opacity-80">Receber & Avisar</span>
+            <span className="text-[10px] text-indigo-100 opacity-80 truncate w-full">Receber & Avisar</span>
           </button>
 
           {/* Action 4: Câmeras CFTV */}
           <button
             onClick={() => onNavigateTab('cctv')}
-            className="flex flex-col items-center justify-center p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
           >
-            <Video className="w-6 h-6 mb-1 text-sky-400 group-hover:scale-110 transition-transform" />
+            <Video className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-sky-400 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Câmeras CFTV</span>
-            <span className="text-[10px] text-slate-400">Ao vivo ({cameras.length})</span>
+            <span className="text-[10px] text-slate-400 truncate w-full">Ao vivo ({cameras.length})</span>
           </button>
 
           {/* Action 5: Nova Ocorrência */}
           <button
             onClick={onOpenQuickOccurrenceModal}
-            className="flex flex-col items-center justify-center p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
           >
-            <AlertTriangle className="w-6 h-6 mb-1 text-rose-400 group-hover:scale-110 transition-transform" />
+            <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-rose-400 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Nova Ocorrência</span>
-            <span className="text-[10px] text-slate-400">Barulho / Danos</span>
+            <span className="text-[10px] text-slate-400 truncate w-full">Barulho / Danos</span>
           </button>
 
           {/* Action 6: Consultar Apartamento */}
           <button
             onClick={() => onNavigateTab('apartments')}
-            className="flex flex-col items-center justify-center p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
           >
-            <Building className="w-6 h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <Building className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold tracking-wide">Ficha Apt</span>
-            <span className="text-[10px] text-slate-400">Moradores & Vagas</span>
+            <span className="text-[10px] text-slate-400 truncate w-full">Moradores & Vagas</span>
           </button>
         </div>
       </div>

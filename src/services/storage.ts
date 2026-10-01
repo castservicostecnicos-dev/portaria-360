@@ -20,10 +20,12 @@ import {
   WhatsAppTemplate,
   CCTVCamera,
   CommunicationNotice,
+  ClientCondo,
 } from '../types';
 
 import {
   SEED_CONDO,
+  SEED_CLIENT_CONDOS,
   SEED_USERS,
   SEED_BLOCKS,
   SEED_APARTMENTS,
@@ -48,6 +50,7 @@ import {
 
 const STORAGE_KEYS = {
   CONDO: 'portaria360_condo',
+  CLIENT_CONDOS: 'portaria360_client_condos',
   USERS: 'portaria360_users',
   CURRENT_USER: 'portaria360_current_user',
   BLOCKS: 'portaria360_blocks',
@@ -82,6 +85,9 @@ class StorageService {
     if (!localStorage.getItem(STORAGE_KEYS.CONDO)) {
       this.resetToInitialSeed();
     }
+    if (!localStorage.getItem(STORAGE_KEYS.CLIENT_CONDOS)) {
+      localStorage.setItem(STORAGE_KEYS.CLIENT_CONDOS, JSON.stringify(SEED_CLIENT_CONDOS));
+    }
   }
 
   public subscribe(callback: () => void): () => void {
@@ -101,6 +107,7 @@ class StorageService {
 
   public resetToInitialSeed() {
     localStorage.setItem(STORAGE_KEYS.CONDO, JSON.stringify(SEED_CONDO));
+    localStorage.setItem(STORAGE_KEYS.CLIENT_CONDOS, JSON.stringify(SEED_CLIENT_CONDOS));
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(SEED_USERS[1])); // Default as Porteiro João Pedro
     localStorage.setItem(STORAGE_KEYS.BLOCKS, JSON.stringify(SEED_BLOCKS));
@@ -243,6 +250,155 @@ class StorageService {
     if (target) {
       this.addAuditLog('Exclusão de Usuário', 'Usuários', `Usuário ${target.name} removido`);
     }
+  }
+
+  // Client Condos (Multi-condo Dev Management)
+  public getClientCondos(): ClientCondo[] {
+    return this.getItem<ClientCondo[]>(STORAGE_KEYS.CLIENT_CONDOS, SEED_CLIENT_CONDOS);
+  }
+
+  public saveClientCondo(condo: ClientCondo) {
+    const list = this.getClientCondos();
+    const idx = list.findIndex((c) => c.id === condo.id);
+    if (idx >= 0) {
+      list[idx] = condo;
+      this.addAuditLog('Atualização de Condomínio', 'Dev Master', `Condomínio ${condo.name} atualizado pelo desenvolvedor`);
+    } else {
+      list.unshift(condo);
+      this.addAuditLog('Cadastro de Condomínio', 'Dev Master', `Novo condomínio ${condo.name} e ADM Predial ${condo.admPredial.name} cadastrados`);
+    }
+    this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
+
+    // Sync ADM Predial into Users table so they can log in immediately
+    if (condo.admPredial && condo.admPredial.email) {
+      const users = this.getUsers();
+      const existingUserIdx = users.findIndex(
+        (u) => u.id === condo.admPredial.id || u.email.toLowerCase() === condo.admPredial.email.toLowerCase()
+      );
+      const admUser: User = {
+        id: condo.admPredial.id || `user-adm-${Date.now()}`,
+        name: `${condo.admPredial.name}`,
+        email: condo.admPredial.email,
+        password: condo.admPredial.password || 'senha123',
+        phone: condo.admPredial.phone || '',
+        role: 'admin',
+        active: condo.active,
+        permissions: {
+          canManageUsers: true,
+          canConfigCondo: true,
+          canDeleteRecords: true,
+          canViewReports: true,
+          canManageSettings: true,
+        },
+      };
+
+      if (existingUserIdx >= 0) {
+        users[existingUserIdx] = {
+          ...users[existingUserIdx],
+          ...admUser,
+          id: users[existingUserIdx].id,
+        };
+      } else {
+        users.push(admUser);
+      }
+      this.setItem(STORAGE_KEYS.USERS, users);
+    }
+  }
+
+  public deleteClientCondo(condoId: string) {
+    const list = this.getClientCondos();
+    const target = list.find((c) => c.id === condoId);
+    const updated = list.filter((c) => c.id !== condoId);
+    this.setItem(STORAGE_KEYS.CLIENT_CONDOS, updated);
+    if (target) {
+      this.addAuditLog('Exclusão de Condomínio', 'Dev Master', `Condomínio ${target.name} removido da plataforma`);
+    }
+  }
+
+  public toggleClientCondoStatus(condoId: string): { success: boolean; active: boolean; status: 'ativo' | 'inativo' } {
+    const list = this.getClientCondos();
+    const idx = list.findIndex((c) => c.id === condoId);
+    if (idx === -1) return { success: false, active: false, status: 'inativo' };
+
+    const newActive = !list[idx].active;
+    list[idx].active = newActive;
+    list[idx].status = newActive ? 'ativo' : 'inativo';
+    this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
+
+    // Also toggle the active status of the ADM Predial user
+    const users = this.getUsers();
+    const admEmail = list[idx].admPredial.email.toLowerCase();
+    const userIdx = users.findIndex((u) => u.email.toLowerCase() === admEmail);
+    if (userIdx >= 0) {
+      users[userIdx].active = newActive;
+      this.setItem(STORAGE_KEYS.USERS, users);
+    }
+
+    this.addAuditLog(
+      'Status de Condomínio Alterado',
+      'Dev Master',
+      `Condomínio ${list[idx].name} agora está ${newActive ? 'ATIVO' : 'DESATIVADO'}`
+    );
+
+    return { success: true, active: newActive, status: list[idx].status };
+  }
+
+  public resetAdmPredialPassword(condoId: string, customNewPassword?: string): { success: boolean; password: string; message: string } {
+    const list = this.getClientCondos();
+    const idx = list.findIndex((c) => c.id === condoId);
+    if (idx === -1) {
+      return { success: false, password: '', message: 'Condomínio não encontrado.' };
+    }
+
+    const newPass = customNewPassword || `portaria@${Math.random().toString(36).slice(-6)}`;
+    list[idx].admPredial.password = newPass;
+    this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
+
+    // Also sync to Users
+    const users = this.getUsers();
+    const admEmail = list[idx].admPredial.email.toLowerCase();
+    const userIdx = users.findIndex((u) => u.email.toLowerCase() === admEmail);
+    if (userIdx >= 0) {
+      users[userIdx].password = newPass;
+      this.setItem(STORAGE_KEYS.USERS, users);
+    }
+
+    this.addAuditLog(
+      'Reset de Senha ADM Predial',
+      'Dev Master',
+      `Senha do ADM ${list[idx].admPredial.name} (${list[idx].name}) resetada`
+    );
+
+    return {
+      success: true,
+      password: newPass,
+      message: `Senha do ADM ${list[idx].admPredial.name} redefinida com sucesso para "${newPass}"`,
+    };
+  }
+
+  public switchActiveCondo(condoId: string): { success: boolean; condo?: ClientCondo } {
+    const list = this.getClientCondos();
+    const target = list.find((c) => c.id === condoId);
+    if (!target) return { success: false };
+
+    // Update active condo config
+    const current = this.getCondo();
+    const updated: CondoConfig = {
+      ...current,
+      id: target.id,
+      name: target.name,
+      cnpj: target.cnpj || current.cnpj,
+      address: target.address,
+      city: target.city,
+      state: target.state,
+      phone: target.phone,
+      email: target.email,
+      blocksCount: target.blocksCount,
+      aptsCount: target.aptsCount,
+    };
+    this.saveCondo(updated);
+    this.addAuditLog('Troca de Contexto Condomínio', 'Dev Master', `Visualização do condomínio ${target.name} iniciada`);
+    return { success: true, condo: target };
   }
 
   // Condo Config
@@ -536,6 +692,15 @@ class StorageService {
     else list.push(camera);
     this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list);
     this.addAuditLog('Câmera CFTV', 'Segurança', `Câmera ${camera.name} (${camera.location}) configurada`);
+  }
+
+  public deleteCCTVCamera(id: string) {
+    const list = this.getCCTVCameras();
+    const target = list.find((c) => c.id === id);
+    this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list.filter((c) => c.id !== id));
+    if (target) {
+      this.addAuditLog('Câmera CFTV Removida', 'Segurança', `Câmera ${target.name} removida`);
+    }
   }
 
   // Communication Notices (Mural de Avisos)

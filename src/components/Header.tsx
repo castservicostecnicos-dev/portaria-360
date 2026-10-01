@@ -10,6 +10,7 @@ interface HeaderProps {
   onToggleSidebarMobile: () => void;
   onOpenQuickNotice?: () => void;
   onOpenLogin: () => void;
+  onUserChanged?: (user: User) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebarMobile,
   onOpenQuickNotice,
   onOpenLogin,
+  onUserChanged,
 }) => {
   const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
   const [users, setUsers] = useState<User[]>([]);
@@ -62,22 +64,25 @@ export const Header: React.FC<HeaderProps> = ({
   const handleSelectUser = (user: User) => {
     storage.setCurrentUser(user);
     setShowUserDropdown(false);
+    if (onUserChanged) {
+      onUserChanged(user);
+    }
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">
       {/* Zone 1: Mobile Hamburger + Brand Name */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
         <button
           onClick={onToggleSidebarMobile}
-          className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0"
           aria-label="Abrir Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
             {condo.logoUrl ? (
               <img
                 src={condo.logoUrl}
@@ -89,14 +94,14 @@ export const Header: React.FC<HeaderProps> = ({
               <Shield className="w-4 h-4 text-emerald-400" />
             )}
           </div>
-          <div className="leading-tight">
-            <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+          <div className="leading-tight min-w-0">
+            <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1 sm:gap-1.5 truncate">
               <span>Portaria360</span>
-              <span className="text-[10px] font-normal text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
+              <span className="text-[9px] sm:text-[10px] font-normal text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1 sm:px-1.5 py-0.2 rounded shrink-0">
                 PRO
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400 truncate max-w-[150px] sm:max-w-[220px]">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[110px] sm:max-w-[220px]">
               {condo.name}
             </p>
           </div>
@@ -131,14 +136,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Zone 3: Global Search, Quick Handover & User Role Switcher */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* PWA Install Button */}
         <PWAInstallButton />
 
         {/* Quick Search Button */}
         <button
           onClick={onOpenSearch}
-          className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-xs text-slate-300 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-lg transition-colors group"
+          className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 text-xs text-slate-300 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-lg transition-colors group shrink-0"
           title="Buscar morador, placa, apartamento, encomenda (Ctrl+K)"
         >
           <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400" />
@@ -162,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className={`flex items-center gap-2 px-2.5 py-1.5 text-xs border rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-2.5 sm:py-1.5 text-xs border rounded-lg transition-colors shrink-0 ${
               currentUser.role === 'dev' || currentUser.email === 'ale11062@gmail.com'
                 ? 'bg-purple-950/60 border-purple-600/70 text-purple-200 hover:bg-purple-900/70'
                 : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'

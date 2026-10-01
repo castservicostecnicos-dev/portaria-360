@@ -13,6 +13,7 @@ import { WhatsAppModal } from './components/WhatsAppModal';
 import { LoginModal } from './components/LoginModal';
 import { WhatsAppPayload } from './services/whatsapp';
 import { DeliveryItem } from './types';
+import { LayoutDashboard, ShieldCheck, Package, Video, Menu, Sparkles } from 'lucide-react';
 
 // Views
 import { DashboardView } from './views/DashboardView';
@@ -30,9 +31,14 @@ import { OccurrencesView } from './views/OccurrencesView';
 import { OtherControlsView } from './views/OtherControlsView';
 import { ReportsView } from './views/ReportsView';
 import { AdminSettingsView } from './views/AdminSettingsView';
+import { DevMasterView } from './views/DevMasterView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const initialUser = storage.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    initialUser.role === 'dev' ? 'dev_master' : 'dashboard'
+  );
   const [isSidebarMobileOpen, setIsSidebarMobileOpen] = useState(false);
 
   // Modals state
@@ -51,7 +57,6 @@ export default function App() {
   const [pendingDeliveriesCount, setPendingDeliveriesCount] = useState(0);
   const [openOccurrencesCount, setOpenOccurrencesCount] = useState(0);
   const [waitingAuthCount, setWaitingAuthCount] = useState(0);
-  const [currentUser, setCurrentUser] = useState(storage.getCurrentUser());
 
   const refreshBadges = () => {
     setCurrentUser(storage.getCurrentUser());
@@ -125,16 +130,24 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased w-full max-w-full overflow-x-hidden">
       {/* Top Header */}
       <Header
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenShiftHandover={() => setIsShiftModalOpen(true)}
         onToggleSidebarMobile={() => setIsSidebarMobileOpen((prev) => !prev)}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        onUserChanged={(user) => {
+          refreshBadges();
+          if (user.role === 'dev') {
+            setActiveTab('dev_master');
+          } else if (activeTab === 'dev_master' || activeTab === 'dev_demo') {
+            setActiveTab('dashboard');
+          }
+        }}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden w-full max-w-full">
         {/* Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -151,7 +164,44 @@ export default function App() {
         />
 
         {/* Main Content Workspace */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full min-w-0 pb-20 lg:pb-8">
+          {/* Top banner if Dev Master is inspecting a demo gatehouse view */}
+          {currentUser.role === 'dev' && activeTab !== 'dev_master' && activeTab !== 'dev_demo' && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-700/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-lg">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs text-indigo-200">
+                  <strong className="text-white font-semibold">Portaria de Demonstração (Modo Dev Master)</strong> &mdash; Condomínio sob inspeção: <span className="text-amber-300 font-bold">{storage.getCondo().name}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab('dev_demo')}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-200 rounded-lg text-xs border border-indigo-900 transition-colors"
+                >
+                  Roteiro de Vendas
+                </button>
+                <button
+                  onClick={() => setActiveTab('dev_master')}
+                  className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors cursor-pointer"
+                >
+                  Voltar para Gestão de Clientes
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'dev_master' || activeTab === 'dev_demo') && (
+            <DevMasterView
+              initialTab={activeTab === 'dev_demo' ? 'demo' : 'clients'}
+              onEnterCondoDemo={(condoId) => {
+                storage.switchActiveCondo(condoId);
+                setActiveTab('dashboard');
+              }}
+              onOpenWhatsApp={handleOpenWhatsApp}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <DashboardView
               onNavigateTab={(tab) => setActiveTab(tab)}
@@ -251,7 +301,14 @@ export default function App() {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={() => refreshBadges()}
+        onLoginSuccess={(user) => {
+          refreshBadges();
+          if (user.role === 'dev') {
+            setActiveTab('dev_master');
+          } else {
+            setActiveTab('dashboard');
+          }
+        }}
       />
 
       {whatsAppPayload && (
@@ -261,6 +318,78 @@ export default function App() {
           initialPayload={whatsAppPayload}
         />
       )}
+
+      {/* Mobile Fixed Bottom Navigation Bar - keeps primary buttons & accesses strictly visible without horizontal scroll */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 lg:hidden flex items-center justify-around px-1 py-1 shadow-2xl safe-area-bottom w-full max-w-full">
+        <button
+          onClick={() => {
+            setActiveTab(currentUser.role === 'dev' ? 'dev_master' : 'dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
+            activeTab === 'dashboard' || activeTab === 'dev_master'
+              ? 'text-emerald-400 font-semibold'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          {currentUser.role === 'dev' ? <Sparkles className="w-5 h-5 mb-0.5" /> : <LayoutDashboard className="w-5 h-5 mb-0.5" />}
+          <span>{currentUser.role === 'dev' ? 'Dev Portal' : 'Início'}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('access');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
+            activeTab === 'access' ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <ShieldCheck className="w-5 h-5 mb-0.5" />
+          <span>Portaria</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('deliveries');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
+            activeTab === 'deliveries' ? 'text-indigo-400 font-semibold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <div className="relative">
+            <Package className="w-5 h-5 mb-0.5" />
+            {pendingDeliveriesCount > 0 && (
+              <span className="absolute -top-1 -right-2 bg-amber-500 text-black font-bold text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-mono">
+                {pendingDeliveriesCount > 9 ? '9+' : pendingDeliveriesCount}
+              </span>
+            )}
+          </div>
+          <span>Encomendas</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('cctv');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
+            activeTab === 'cctv' ? 'text-sky-400 font-semibold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Video className="w-5 h-5 mb-0.5" />
+          <span>Câmeras</span>
+        </button>
+
+        <button
+          onClick={() => setIsSidebarMobileOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium text-slate-400 hover:text-white transition-colors"
+        >
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span>Menu</span>
+        </button>
+      </nav>
     </div>
   );
 }

@@ -16,11 +16,15 @@ import {
   BarChart3,
   Settings,
   X,
+  Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
 
 export type ActiveTab =
+  | 'dev_master'
+  | 'dev_demo'
   | 'dashboard'
   | 'access'
   | 'cctv'
@@ -63,61 +67,108 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onCloseMobile();
   };
 
-  const navGroups = [
-    {
-      label: 'Operação Principal',
-      items: [
-        { id: 'dashboard' as ActiveTab, label: 'Painel da Portaria', icon: LayoutDashboard },
-        {
-          id: 'access' as ActiveTab,
-          label: 'Controle de Acesso',
-          icon: ShieldCheck,
-          badge: waitingAuthCount > 0 ? `${waitingAuthCount} pend.` : undefined,
-          badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
-        },
-        { id: 'cctv' as ActiveTab, label: 'Câmeras CFTV', icon: Video, highlight: true },
-      ],
-    },
-    {
-      label: 'Fluxo Diário & Comunicação',
-      items: [
-        {
-          id: 'deliveries' as ActiveTab,
-          label: 'Encomendas & WhatsApp',
-          icon: Package,
-          badge: pendingDeliveriesCount > 0 ? String(pendingDeliveriesCount) : undefined,
-          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-600/30',
-        },
-        { id: 'notices' as ActiveTab, label: 'Mural de Avisos & Envios', icon: Megaphone },
-        { id: 'visitors' as ActiveTab, label: 'Visitantes & Autorizações', icon: UserPlus },
-        { id: 'contractors' as ActiveTab, label: 'Prestadores de Serviço', icon: Wrench },
-        { id: 'public_agents' as ActiveTab, label: 'Agentes Públicos', icon: BadgeCheck },
-        { id: 'vehicles' as ActiveTab, label: 'Veículos & Garagem', icon: Car },
-      ],
-    },
-    {
-      label: 'Cadastros & Ocorrências',
-      items: [
-        { id: 'apartments' as ActiveTab, label: 'Ficha do Apartamento', icon: Building2 },
-        { id: 'residents' as ActiveTab, label: 'Moradores', icon: Users },
-        {
-          id: 'occurrences' as ActiveTab,
-          label: 'Livro de Ocorrências',
-          icon: AlertTriangle,
-          badge: openOccurrencesCount > 0 ? String(openOccurrencesCount) : undefined,
-          badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-600/30',
-        },
-        { id: 'other_controls' as ActiveTab, label: 'Chaves, Achados & Mudanças', icon: Key },
-      ],
-    },
-    {
-      label: 'Gerenciamento',
-      items: [
-        { id: 'reports' as ActiveTab, label: 'Relatórios & Exportação', icon: BarChart3 },
-        { id: 'admin' as ActiveTab, label: 'Condomínio & Usuários', icon: Settings },
-      ],
-    },
-  ];
+  const navGroups =
+    userRole === 'dev'
+      ? [
+          {
+            label: 'Gestão Multi-Condomínio',
+            items: [
+              {
+                id: 'dev_master' as ActiveTab,
+                label: 'Clientes & Condomínios',
+                icon: Building2,
+                badge: 'DEV',
+                badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+              },
+              {
+                id: 'dev_demo' as ActiveTab,
+                label: 'Demonstração Comercial',
+                icon: Sparkles,
+                badge: 'Vendas',
+                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+              },
+            ],
+          },
+          {
+            label: 'Portaria de Demonstração',
+            items: [
+              { id: 'dashboard' as ActiveTab, label: 'Painel da Portaria', icon: LayoutDashboard },
+              {
+                id: 'deliveries' as ActiveTab,
+                label: 'Encomendas & WhatsApp',
+                icon: Package,
+                badge: pendingDeliveriesCount > 0 ? String(pendingDeliveriesCount) : undefined,
+                badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-600/30',
+              },
+              { id: 'access' as ActiveTab, label: 'Controle de Acesso', icon: ShieldCheck },
+              { id: 'cctv' as ActiveTab, label: 'Câmeras CFTV', icon: Video },
+              { id: 'apartments' as ActiveTab, label: 'Ficha do Apartamento', icon: Building2 },
+              { id: 'residents' as ActiveTab, label: 'Moradores', icon: Users },
+              { id: 'occurrences' as ActiveTab, label: 'Livro de Ocorrências', icon: AlertTriangle },
+            ],
+          },
+        ]
+      : [
+          {
+            label: 'Operação Principal',
+            items: [
+              { id: 'dashboard' as ActiveTab, label: 'Painel da Portaria', icon: LayoutDashboard },
+              {
+                id: 'access' as ActiveTab,
+                label: 'Controle de Acesso',
+                icon: ShieldCheck,
+                badge: waitingAuthCount > 0 ? `${waitingAuthCount} pend.` : undefined,
+                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
+              },
+              { id: 'cctv' as ActiveTab, label: 'Câmeras CFTV', icon: Video, highlight: true },
+            ],
+          },
+          {
+            label: 'Fluxo Diário & Comunicação',
+            items: [
+              {
+                id: 'deliveries' as ActiveTab,
+                label: 'Encomendas & WhatsApp',
+                icon: Package,
+                badge: pendingDeliveriesCount > 0 ? String(pendingDeliveriesCount) : undefined,
+                badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-600/30',
+              },
+              { id: 'notices' as ActiveTab, label: 'Mural de Avisos & Envios', icon: Megaphone },
+              { id: 'visitors' as ActiveTab, label: 'Visitantes & Autorizações', icon: UserPlus },
+              { id: 'contractors' as ActiveTab, label: 'Prestadores de Serviço', icon: Wrench },
+              { id: 'public_agents' as ActiveTab, label: 'Agentes Públicos', icon: BadgeCheck },
+              { id: 'vehicles' as ActiveTab, label: 'Veículos & Garagem', icon: Car },
+            ],
+          },
+          {
+            label: 'Cadastros & Ocorrências',
+            items: [
+              { id: 'apartments' as ActiveTab, label: 'Ficha do Apartamento', icon: Building2 },
+              { id: 'residents' as ActiveTab, label: 'Moradores', icon: Users },
+              {
+                id: 'occurrences' as ActiveTab,
+                label: 'Livro de Ocorrências',
+                icon: AlertTriangle,
+                badge: openOccurrencesCount > 0 ? String(openOccurrencesCount) : undefined,
+                badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-600/30',
+              },
+              { id: 'other_controls' as ActiveTab, label: 'Chaves, Achados & Mudanças', icon: Key },
+            ],
+          },
+          {
+            label: 'Gerenciamento',
+            items: [
+              { id: 'reports' as ActiveTab, label: 'Relatórios & Exportação', icon: BarChart3 },
+              {
+                id: 'admin' as ActiveTab,
+                label: userRole === 'admin' ? 'Cadastrar Porteiros & Prédio' : 'Condomínio & Usuários',
+                icon: Settings,
+                badge: userRole === 'admin' ? 'ADM' : undefined,
+                badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+              },
+            ],
+          },
+        ];
 
   return (
     <>

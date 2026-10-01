@@ -750,14 +750,14 @@ export const ApartmentsView: React.FC<ApartmentsViewProps> = ({
                       className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-1 text-xs"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-white">{auth.personName}</span>
+                        <span className="font-semibold text-white">{auth.authorizedName || (auth as any).personName}</span>
                         <span className="text-[10px] text-purple-400 bg-purple-950/60 border border-purple-800 px-2 py-0.5 rounded capitalize">
                           {auth.type}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400">
                         Doc: {auth.document || 'Não informado'} · Válido até:{' '}
-                        <strong className="text-slate-200">{auth.validUntil}</strong>
+                        <strong className="text-slate-200">{auth.endDate || (auth as any).validUntil}</strong>
                       </p>
                       {auth.notes && <p className="text-[10px] text-slate-500">Obs: {auth.notes}</p>}
                     </div>

@@ -408,17 +408,38 @@ export const AdminSettingsView: React.FC = () => {
       {/* TAB 2: USUÁRIOS & PERMISSÕES */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Operadores e Administradores do Sistema
-            </h3>
-            <button
-              onClick={() => handleOpenUserModal()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Novo Usuário</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <span>Equipe de Portaria & Operadores</span>
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-normal">
+                  Gerenciado pelo ADM Predial
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Cadastre os porteiros que operam a guarita e gerenciam as entradas e encomendas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  handleOpenUserModal();
+                  setUserRole('porteiro');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Cadastrar Porteiro</span>
+              </button>
+              <button
+                onClick={() => handleOpenUserModal()}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Outro Perfil</span>
+              </button>
+            </div>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
