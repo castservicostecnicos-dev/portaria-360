@@ -1,0 +1,258 @@
+import React, { useState, useEffect } from 'react';
+import { Search, UserCheck, Shield, ChevronDown, Clock, Bell, Menu, Key, Sparkles, Lock } from 'lucide-react';
+import { storage } from '../services/storage';
+import { User } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
+
+interface HeaderProps {
+  onOpenSearch: () => void;
+  onOpenShiftHandover: () => void;
+  onToggleSidebarMobile: () => void;
+  onOpenQuickNotice?: () => void;
+  onOpenLogin: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  onOpenSearch,
+  onOpenShiftHandover,
+  onToggleSidebarMobile,
+  onOpenQuickNotice,
+  onOpenLogin,
+}) => {
+  const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
+  const [users, setUsers] = useState<User[]>([]);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [condo, setCondo] = useState(storage.getCondo());
+  const [insideCount, setInsideCount] = useState(0);
+  const [pendingDeliveriesCount, setPendingDeliveriesCount] = useState(0);
+  const [currentTime, setCurrentTime] = useState('');
+
+  const refreshData = () => {
+    setCurrentUser(storage.getCurrentUser());
+    setUsers(storage.getUsers());
+    setCondo(storage.getCondo());
+
+    const accessLogs = storage.getAccessLogs();
+    const inside = accessLogs.filter((l) => l.status === 'dentro').length;
+    setInsideCount(inside);
+
+    const dels = storage.getDeliveries();
+    const pendingDels = dels.filter((d) => d.status !== 'retirado' && d.status !== 'devolvido').length;
+    setPendingDeliveriesCount(pendingDels);
+  };
+
+  useEffect(() => {
+    refreshData();
+    const unsub = storage.subscribe(refreshData);
+
+    const updateClock = () => {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setCurrentTime(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+
+    return () => {
+      unsub();
+      clearInterval(timer);
+    };
+  }, []);
+
+  const handleSelectUser = (user: User) => {
+    storage.setCurrentUser(user);
+    setShowUserDropdown(false);
+  };
+
+  return (
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-4 lg:px-6 py-2.5 flex items-center justify-between gap-4">
+      {/* Zone 1: Mobile Hamburger + Brand Name */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onToggleSidebarMobile}
+          className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          aria-label="Abrir Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
+            {condo.logoUrl ? (
+              <img
+                src={condo.logoUrl}
+                alt="Logo"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Shield className="w-4 h-4 text-emerald-400" />
+            )}
+          </div>
+          <div className="leading-tight">
+            <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              <span>Portaria360</span>
+              <span className="text-[10px] font-normal text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
+                PRO
+              </span>
+            </h1>
+            <p className="text-[11px] text-slate-400 truncate max-w-[150px] sm:max-w-[220px]">
+              {condo.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Zone 2: Realtime Operational Status Strip */}
+      <div className="hidden md:flex items-center gap-5 text-xs text-slate-300">
+        <div className="flex items-center gap-1.5 font-mono-tabular">
+          <Clock className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-slate-200 font-semibold">{currentTime}</span>
+        </div>
+
+        <div className="h-4 w-px bg-slate-800" />
+
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>
+            No Condomínio:{' '}
+            <strong className="text-white font-mono-tabular">{insideCount}</strong> pessoas
+          </span>
+        </div>
+
+        <div className="h-4 w-px bg-slate-800" />
+
+        <div>
+          <span>
+            Encomendas Pendentes:{' '}
+            <strong className="text-amber-300 font-mono-tabular">{pendingDeliveriesCount}</strong>
+          </span>
+        </div>
+      </div>
+
+      {/* Zone 3: Global Search, Quick Handover & User Role Switcher */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* PWA Install Button */}
+        <PWAInstallButton />
+
+        {/* Quick Search Button */}
+        <button
+          onClick={onOpenSearch}
+          className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-xs text-slate-300 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-lg transition-colors group"
+          title="Buscar morador, placa, apartamento, encomenda (Ctrl+K)"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400" />
+          <span className="hidden sm:inline">Pesquisar...</span>
+          <kbd className="hidden lg:inline-block text-[10px] px-1.5 py-0.5 text-slate-400 bg-slate-800 rounded border border-slate-700 font-mono">
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* Turn Handover Button */}
+        <button
+          onClick={onOpenShiftHandover}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors"
+          title="Passagem de Turno e Livro de Ocorrências"
+        >
+          <Clock className="w-3.5 h-3.5 text-amber-400" />
+          <span className="whitespace-nowrap">Passagem de Turno</span>
+        </button>
+
+        {/* User Switcher / Auth Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+            className={`flex items-center gap-2 px-2.5 py-1.5 text-xs border rounded-lg transition-colors ${
+              currentUser.role === 'dev' || currentUser.email === 'ale11062@gmail.com'
+                ? 'bg-purple-950/60 border-purple-600/70 text-purple-200 hover:bg-purple-900/70'
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+            }`}
+          >
+            <div
+              className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                currentUser.role === 'dev'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-emerald-600/30 text-emerald-300'
+              }`}
+            >
+              {currentUser.role === 'dev' ? <Sparkles className="w-3 h-3" /> : currentUser.name.charAt(0)}
+            </div>
+            <div className="text-left hidden sm:block max-w-[120px] truncate">
+              <span className="font-medium text-white block truncate flex items-center gap-1">
+                {currentUser.name.split(' ')[0]}
+                {currentUser.role === 'dev' && (
+                  <span className="text-[9px] bg-purple-600 text-white font-bold px-1 rounded">DEV</span>
+                )}
+              </span>
+              <span className="text-[10px] text-slate-400 block -mt-0.5 capitalize">
+                {currentUser.role === 'dev' ? 'Dev Master' : currentUser.role}
+              </span>
+            </div>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {showUserDropdown && (
+            <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50">
+              <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Operador Atual</span>
+                {currentUser.role === 'dev' && (
+                  <span className="text-[10px] text-purple-400 font-bold bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800">
+                    Acesso Master Total
+                  </span>
+                )}
+              </div>
+
+              {/* Login with Password Button */}
+              <div className="p-2 border-b border-slate-800">
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    onOpenLogin();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 rounded-lg shadow transition-all cursor-pointer"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Login com Senha / Acesso Dev</span>
+                </button>
+              </div>
+
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                Troca Rápida de Usuário
+              </div>
+
+              <div className="max-h-56 overflow-y-auto">
+                {users.map((u) => {
+                  const isDev = u.role === 'dev' || u.email === 'ale11062@gmail.com';
+                  return (
+                    <button
+                      key={u.id}
+                      onClick={() => handleSelectUser(u)}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
+                        u.id === currentUser.id ? 'text-emerald-400 bg-slate-800/60' : 'text-slate-300'
+                      }`}
+                    >
+                      <div className="truncate pr-2">
+                        <p className="font-medium text-white flex items-center gap-1.5 truncate">
+                          <span>{u.name}</span>
+                          {isDev && (
+                            <span className="text-[9px] bg-purple-950 text-purple-300 border border-purple-700 px-1 rounded font-bold">
+                              DEV
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {u.email} · <span className="capitalize">{u.role}</span>
+                        </p>
+                      </div>
+                      {u.id === currentUser.id && <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};

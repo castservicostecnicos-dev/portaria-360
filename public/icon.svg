@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="pwaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <linearGradient id="pwaAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#pwaBg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#10b981" stroke-width="6" opacity="0.3"/>
+  <g transform="translate(96, 80)">
+    <!-- Shield Outline -->
+    <path d="M160 20 L290 70 C290 230, 160 330, 160 330 C160 330, 30 230, 30 70 Z" fill="none" stroke="url(#pwaAccent)" stroke-width="16" stroke-linejoin="round"/>
+    <!-- Buildings & Gatehouse -->
+    <rect x="90" y="130" width="50" height="130" rx="4" fill="#10b981" opacity="0.85"/>
+    <rect x="150" y="90" width="60" height="170" rx="4" fill="#34d399"/>
+    <rect x="220" y="150" width="40" height="110" rx="4" fill="#059669" opacity="0.9"/>
+    <!-- Gate Barrier -->
+    <rect x="70" y="240" width="180" height="12" rx="6" fill="#f59e0b"/>
+    <!-- Keyhole / Security Check -->
+    <circle cx="160" cy="190" r="16" fill="#0f172a"/>
+    <polygon points="152,190 168,190 172,216 148,216" fill="#0f172a"/>
+  </g>
+  <!-- Text Label -->
+  <text x="256" y="445" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="2">PORTARIA<tspan fill="#34d399">360</tspan></text>
+</svg>
