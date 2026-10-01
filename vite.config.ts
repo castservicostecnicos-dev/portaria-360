@@ -10,8 +10,17 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['apple-touch-icon.png', 'icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+        includeAssets: [
+          'favicon.ico',
+          'favicon-32x32.png',
+          'favicon-16x16.png',
+          'apple-touch-icon.png',
+          'icon.svg',
+          'pwa-192x192.png',
+          'pwa-512x512.png',
+          'pwa-maskable-512x512.png',
+          'app-icon.png',
+        ],
         manifest: {
           id: '/',
           name: 'Portaria360 - Gestão de Portaria Condominial',

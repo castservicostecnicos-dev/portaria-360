@@ -394,6 +394,30 @@ export const AdminSettingsView: React.FC = () => {
             </div>
           </div>
 
+          {/* Visual Identity & App Icons */}
+          <div className="pt-3 border-t border-slate-800 space-y-3">
+            <h4 className="font-semibold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Identidade Visual & Ícones do Aplicativo (PWA)
+            </h4>
+            <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-slate-900 shadow-lg shrink-0">
+                  <img src="/pwa-192x192.png" alt="Ícone do Aplicativo" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <span>Ícone Ativo do Portaria360</span>
+                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded">PWA Ready</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Imagem aplicada como ícone nos formatos PWA (192px, 512px, Maskable), Apple Touch Icon (180px) e Favicon de navegador.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="pt-3 border-t border-slate-800 flex justify-end">
             <button
               type="submit"

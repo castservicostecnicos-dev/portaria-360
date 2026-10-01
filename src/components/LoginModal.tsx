@@ -89,8 +89,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-              <Shield className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-emerald-500/40 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+              <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">

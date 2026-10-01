@@ -91,17 +91,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6">
       {/* Top Banner / Operator Greeting */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Posto de Atendimento Ativo · {storage.getCondo().name}</span>
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-800 shadow-md shrink-0 hidden sm:flex items-center justify-center">
+            <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Olá, {currentUser.name.split(' ')[0]}!
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Painel operacional centralizado. Monitore acessos, encomendas e ocorrências em tempo real.
-          </p>
+          <div>
+            <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Posto de Atendimento Ativo · {storage.getCondo().name}</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Olá, {currentUser.name.split(' ')[0]}!
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Painel operacional centralizado. Monitore acessos, encomendas e ocorrências em tempo real.
+            </p>
+          </div>
         </div>
 
         {/* Quick Shift summary */}

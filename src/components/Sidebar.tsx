@@ -187,8 +187,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         {/* Mobile Header Close */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 lg:hidden">
-          <span className="text-sm font-semibold text-white">Menu de Navegação</span>
+        <div className="flex items-center justify-between p-3.5 border-b border-slate-800 lg:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
+              <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-sm font-semibold text-white">Menu Portaria360</span>
+          </div>
           <button
             onClick={onCloseMobile}
             className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors"
