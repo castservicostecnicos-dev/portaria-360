@@ -90,11 +90,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         <div className="px-6 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-slate-800 border border-emerald-500/40 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
-              <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
+              <img src="/app-icon.png" alt="CAST 360" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                {mode === 'login' ? 'Acesso ao Portaria360' : 'Recuperação de Senha'}
+                {mode === 'login' ? 'Acesso ao CAST 360' : 'Recuperação de Senha'}
               </h3>
               <p className="text-[11px] text-slate-400">Autenticação de Operadores e Gestores</p>
             </div>

@@ -18,9 +18,11 @@ import {
   X,
   Sparkles,
   ShieldAlert,
+  LogOut,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
+import { storage } from '../services/storage';
 
 export type ActiveTab =
   | 'dev_master'
@@ -50,6 +52,7 @@ interface SidebarProps {
   pendingDeliveriesCount: number;
   openOccurrencesCount: number;
   waitingAuthCount: number;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -61,7 +64,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingDeliveriesCount,
   openOccurrencesCount,
   waitingAuthCount,
+  onLogout,
 }) => {
+  const currentUser = storage.getCurrentUser();
+  const condo = storage.getCondo();
   const handleNavClick = (tab: ActiveTab) => {
     setActiveTab(tab);
     onCloseMobile();
@@ -189,10 +195,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Mobile Header Close */}
         <div className="flex items-center justify-between p-3.5 border-b border-slate-800 lg:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
-              <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-500/40 bg-slate-800 flex items-center justify-center shrink-0 shadow">
+              <img src="/app-icon.png" alt="CAST 360" className="w-full h-full object-cover" />
             </div>
-            <span className="text-sm font-semibold text-white">Menu Portaria360</span>
+            <span className="text-sm font-semibold text-white">Menu CAST 360</span>
           </div>
           <button
             onClick={onCloseMobile}
@@ -200,6 +206,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Desktop Sidebar Top Logo Branding */}
+        <div className="hidden lg:flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-950/60">
+          <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 flex items-center justify-center shrink-0 shadow">
+            <img src="/app-icon.png" alt="CAST 360" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+              <span>CAST 360</span>
+              <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-1.5 py-0.5 rounded">PRO</span>
+            </div>
+            <p className="text-[10px] text-slate-400">Gestão de Portaria</p>
+          </div>
         </div>
 
         {/* Navigation list */}
@@ -250,13 +270,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <PWAInstallButton variant="full" />
         </div>
 
+        {/* Active Operator & Logout Box */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/70 space-y-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0 shadow-sm">
+              {currentUser.name.charAt(0)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-semibold text-white block truncate leading-tight">
+                {currentUser.name}
+              </span>
+              <span className="text-[10px] text-slate-400 block truncate capitalize">
+                {currentUser.role === 'dev' ? 'Dev Master' : `${currentUser.role} · ${condo.name}`}
+              </span>
+            </div>
+          </div>
+
+          {onLogout && (
+            <button
+              onClick={() => {
+                onCloseMobile();
+                onLogout();
+              }}
+              title="Desligar do App / Troca de Porteiro"
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 hover:border-rose-700 text-rose-300 hover:text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>Desligar / Trocar Porteiro</span>
+            </button>
+          )}
+        </div>
+
         {/* Footer info */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60 text-[11px] text-slate-400 flex items-center justify-between">
+        <div className="p-2.5 border-t border-slate-800 bg-slate-950/90 text-[10px] text-slate-400 flex items-center justify-between">
           <div className="truncate">
-            <span className="text-slate-300 font-medium block truncate">Portaria 24h</span>
+            <span className="text-slate-300 font-medium block truncate">Portaria CAST 360</span>
             <span className="text-emerald-400 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-              Sistema Online
+              Posto de Atendimento Ativo
             </span>
           </div>
           <span className="text-[10px] font-mono text-slate-500">v2.5</span>

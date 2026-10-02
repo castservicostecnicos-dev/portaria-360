@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserCheck, Shield, ChevronDown, Clock, Bell, Menu, Key, Sparkles, Lock } from 'lucide-react';
+import { Search, UserCheck, Shield, ChevronDown, Clock, Bell, Menu, Key, Sparkles, Lock, LogOut } from 'lucide-react';
 import { storage } from '../services/storage';
 import { User } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -10,6 +10,7 @@ interface HeaderProps {
   onToggleSidebarMobile: () => void;
   onOpenQuickNotice?: () => void;
   onOpenLogin: () => void;
+  onLogout: () => void;
   onUserChanged?: (user: User) => void;
 }
 
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebarMobile,
   onOpenQuickNotice,
   onOpenLogin,
+  onLogout,
   onUserChanged,
 }) => {
   const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
@@ -82,21 +84,19 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden border border-emerald-500/30 bg-slate-800 flex items-center justify-center shrink-0">
-            {condo.logoUrl ? (
-              <img
-                src={condo.logoUrl}
-                alt="Logo"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Shield className="w-4 h-4 text-emerald-400" />
-            )}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-800 flex items-center justify-center shrink-0 shadow-md">
+            <img
+              src="/app-icon.png"
+              alt="Logo CAST 360"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/pwa-192x192.png';
+              }}
+            />
           </div>
           <div className="leading-tight min-w-0">
             <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1 sm:gap-1.5 truncate">
-              <span>Portaria360</span>
+              <span>CAST 360</span>
               <span className="text-[9px] sm:text-[10px] font-normal text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1 sm:px-1.5 py-0.2 rounded shrink-0">
                 PRO
               </span>
@@ -254,9 +254,33 @@ export const Header: React.FC<HeaderProps> = ({
                   );
                 })}
               </div>
+
+              {/* Logout / Desligar Button */}
+              <div className="p-2 border-t border-slate-800 bg-slate-950/70">
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    onLogout();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 rounded-lg shadow transition-all cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Desligar da Portaria (Sair)</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
+
+        {/* Dedicated Quick Logout Button */}
+        <button
+          onClick={onLogout}
+          title="Desligar do App / Troca de Porteiro"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 hover:border-rose-700 rounded-lg shadow-sm transition-all cursor-pointer shrink-0"
+        >
+          <LogOut className="w-3.5 h-3.5 text-rose-400" />
+          <span className="hidden sm:inline font-semibold">Desligar</span>
+        </button>
       </div>
     </header>
   );

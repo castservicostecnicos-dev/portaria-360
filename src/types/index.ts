@@ -18,6 +18,8 @@ export interface User {
   active: boolean;
   permissions: UserPermissions;
   lastLogin?: string;
+  condoId?: string;
+  condoName?: string;
 }
 
 export interface ClientCondo {

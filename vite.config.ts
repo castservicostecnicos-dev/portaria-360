@@ -23,8 +23,8 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'Portaria360 - Gestão de Portaria Condominial',
-          short_name: 'Portaria360',
+          name: 'CAST 360 - Gestão de Portaria Condominial',
+          short_name: 'CAST 360',
           description: 'Sistema completo e responsivo para gestão de portaria condominial: acessos, moradores, encomendas e ocorrências.',
           theme_color: '#020617',
           background_color: '#020617',

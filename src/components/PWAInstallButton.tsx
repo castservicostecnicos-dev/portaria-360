@@ -29,7 +29,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ className = 
     } else {
       // General instructions modal for desktop or unsupported browsers
       alert(
-        'Para instalar o Portaria360 como aplicativo:\n\n• No Google Chrome/Edge (Computador): clique no ícone de computador/instalação na barra de endereços (à direita).\n• No Celular Android: abra o menu do navegador (3 pontinhos) e toque em "Adicionar à tela inicial" ou "Instalar aplicativo".'
+        'Para instalar o CAST 360 como aplicativo:\n\n• No Google Chrome/Edge (Computador): clique no ícone de computador/instalação na barra de endereços (à direita).\n• No Celular Android: abra o menu do navegador (3 pontinhos) e toque em "Adicionar à tela inicial" ou "Instalar aplicativo".'
       );
     }
   };
@@ -44,11 +44,11 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ className = 
             ? 'w-full justify-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
             : 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-700/60'
         } ${className}`}
-        title="Instalar Portaria360 no computador ou celular (PWA)"
+        title="Instalar CAST 360 no computador ou celular (PWA)"
       >
         <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
         <span className={variant === 'full' ? 'inline' : 'hidden sm:inline'}>
-          {variant === 'full' ? 'Instalar App Portaria360' : 'Instalar App'}
+          {variant === 'full' ? 'Instalar App CAST 360' : 'Instalar App'}
         </span>
       </button>
 
@@ -112,7 +112,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ className = 
       {showSuccessToast && (
         <div className="fixed bottom-4 right-4 z-50 p-3 bg-emerald-900 border border-emerald-500 text-white text-xs font-semibold rounded-xl shadow-2xl flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>Portaria360 instalado com sucesso!</span>
+          <span>CAST 360 instalado com sucesso!</span>
         </div>
       )}
     </>

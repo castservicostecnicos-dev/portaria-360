@@ -105,7 +105,7 @@ export const SEED_CLIENT_CONDOS: ClientCondo[] = [
 ];
 
 export const SEED_CONDO: CondoConfig = {
-  id: 'condo-1',
+  id: 'condo-solar-palmeiras',
   name: 'Residencial Solar das Palmeiras',
   cnpj: '12.345.678/0001-90',
   address: 'Alameda das Palmeiras Imperiais, 850',
@@ -114,7 +114,7 @@ export const SEED_CONDO: CondoConfig = {
   state: 'SP',
   phone: '(11) 3456-7890',
   email: 'portaria@solardaspalmeiras.com.br',
-  logoUrl: '/src/assets/images/condo_logo_crest_1790763372283.jpg',
+  logoUrl: '/app-icon.png',
   facadeUrl: '/src/assets/images/condo_facade_photo_1790763360839.jpg',
   blocksCount: 2,
   aptsCount: 40,
@@ -152,6 +152,8 @@ export const SEED_USERS: User[] = [
     role: 'admin',
     phone: '(11) 98765-4321',
     active: true,
+    condoId: 'condo-solar-palmeiras',
+    condoName: 'Residencial Solar das Palmeiras',
     permissions: {
       canManageUsers: true,
       canConfigCondo: true,
@@ -169,6 +171,8 @@ export const SEED_USERS: User[] = [
     role: 'admin',
     phone: '(11) 98888-1234',
     active: true,
+    condoId: 'condo-sao-sebastiao',
+    condoName: 'Condomínio Edifício São Sebastião',
     permissions: {
       canManageUsers: true,
       canConfigCondo: true,
@@ -179,6 +183,25 @@ export const SEED_USERS: User[] = [
     lastLogin: '2026-09-30 09:30',
   },
   {
+    id: 'user-adm-roberto',
+    name: 'Roberto Alencar (ADM Predial)',
+    email: 'roberto.adm@jardinsalianca.com.br',
+    password: 'alencar@jardins2026',
+    role: 'admin',
+    phone: '(19) 99123-7788',
+    active: false,
+    condoId: 'condo-jardins-alianca',
+    condoName: 'Residencial Jardins da Aliança',
+    permissions: {
+      canManageUsers: true,
+      canConfigCondo: true,
+      canDeleteRecords: true,
+      canViewReports: true,
+      canManageSettings: true,
+    },
+    lastLogin: '2026-09-28 11:00',
+  },
+  {
     id: 'user-porteiro-1',
     name: 'João Pedro da Silva',
     email: 'joao.portaria@solardaspalmeiras.com.br',
@@ -186,6 +209,8 @@ export const SEED_USERS: User[] = [
     role: 'porteiro',
     phone: '(11) 97123-4567',
     active: true,
+    condoId: 'condo-solar-palmeiras',
+    condoName: 'Residencial Solar das Palmeiras',
     permissions: {
       canManageUsers: false,
       canConfigCondo: false,
@@ -203,6 +228,8 @@ export const SEED_USERS: User[] = [
     role: 'porteiro',
     phone: '(11) 97654-3210',
     active: true,
+    condoId: 'condo-solar-palmeiras',
+    condoName: 'Residencial Solar das Palmeiras',
     permissions: {
       canManageUsers: false,
       canConfigCondo: false,
@@ -213,6 +240,25 @@ export const SEED_USERS: User[] = [
     lastLogin: '2026-09-29 14:00',
   },
   {
+    id: 'user-porteiro-sebastiao',
+    name: 'Pedro Silveira (Porteiro)',
+    email: 'pedro.portaria@saosebastiao.com.br',
+    password: 'portaria@pedro',
+    role: 'porteiro',
+    phone: '(11) 98765-1122',
+    active: true,
+    condoId: 'condo-sao-sebastiao',
+    condoName: 'Condomínio Edifício São Sebastião',
+    permissions: {
+      canManageUsers: false,
+      canConfigCondo: false,
+      canDeleteRecords: false,
+      canViewReports: true,
+      canManageSettings: false,
+    },
+    lastLogin: '2026-09-30 06:30',
+  },
+  {
     id: 'user-supervisor',
     name: 'Helena Duarte Ramos',
     email: 'helena.adm@solardaspalmeiras.com.br',
@@ -220,6 +266,8 @@ export const SEED_USERS: User[] = [
     role: 'supervisor',
     phone: '(11) 99887-7665',
     active: true,
+    condoId: 'condo-solar-palmeiras',
+    condoName: 'Residencial Solar das Palmeiras',
     permissions: {
       canManageUsers: false,
       canConfigCondo: true,

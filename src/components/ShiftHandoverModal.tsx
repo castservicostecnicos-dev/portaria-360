@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckSquare, Square, X, AlertCircle, ArrowRight, UserCheck, Check } from 'lucide-react';
+import { Clock, CheckSquare, Square, X, AlertCircle, ArrowRight, UserCheck, Check, LogOut } from 'lucide-react';
 import { storage } from '../services/storage';
 import { ShiftEntry, ShiftPendingItem, User } from '../types';
 
@@ -7,15 +7,19 @@ interface ShiftHandoverModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTurnoCompleted?: () => void;
+  onLogoutRequested?: () => void;
 }
 
 export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
   isOpen,
   onClose,
   onTurnoCompleted,
+  onLogoutRequested,
 }) => {
   const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
   const [nextOperatorName, setNextOperatorName] = useState('');
+  const [selectedNextUser, setSelectedNextUser] = useState<User | null>(null);
+  const [disconnectToLogin, setDisconnectToLogin] = useState(false);
   const [generalNotes, setGeneralNotes] = useState('');
   const [pendencies, setPendencies] = useState<ShiftPendingItem[]>([]);
   const [activeShift, setActiveShift] = useState<ShiftEntry | null>(null);
@@ -123,6 +127,12 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
     setSignedSuccess(true);
     setTimeout(() => {
       setSignedSuccess(false);
+      if (disconnectToLogin) {
+        storage.logout();
+        if (onLogoutRequested) onLogoutRequested();
+      } else if (selectedNextUser) {
+        storage.setCurrentUser(selectedNextUser);
+      }
       if (onTurnoCompleted) onTurnoCompleted();
       onClose();
     }, 1200);
@@ -222,8 +232,11 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
                   <button
                     key={u.id}
                     type="button"
-                    onClick={() => setNextOperatorName(u.name)}
-                    className={`p-2.5 rounded-lg border text-left text-xs transition-colors flex items-center justify-between ${
+                    onClick={() => {
+                      setNextOperatorName(u.name);
+                      setSelectedNextUser(u);
+                    }}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-colors flex items-center justify-between cursor-pointer ${
                       nextOperatorName === u.name
                         ? 'border-emerald-500 bg-emerald-950/40 text-white'
                         : 'border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700'
@@ -242,9 +255,67 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
               type="text"
               placeholder="Ou digite o nome completo caso não esteja na lista..."
               value={nextOperatorName}
-              onChange={(e) => setNextOperatorName(e.target.value)}
+              onChange={(e) => {
+                setNextOperatorName(e.target.value);
+                setSelectedNextUser(null);
+              }}
               className="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
             />
+          </div>
+
+          {/* Action on Finish Shift */}
+          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+            <span className="text-xs font-semibold text-slate-200 block">
+              Como deseja concluir a troca de porteiro?
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label
+                className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2 ${
+                  !disconnectToLogin
+                    ? 'border-emerald-500 bg-emerald-950/40 text-white'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="handoverActionMode"
+                  checked={!disconnectToLogin}
+                  onChange={() => setDisconnectToLogin(false)}
+                  className="mt-0.5 text-emerald-500 cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-xs block text-slate-200">Trocar Imediatamente</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5 leading-snug">
+                    O próximo porteiro assume o sistema e todos os novos atendimentos na hora.
+                  </span>
+                </div>
+              </label>
+
+              <label
+                className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2 ${
+                  disconnectToLogin
+                    ? 'border-rose-500 bg-rose-950/40 text-white'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="handoverActionMode"
+                  checked={disconnectToLogin}
+                  onChange={() => setDisconnectToLogin(true)}
+                  className="mt-0.5 text-rose-500 cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-xs block text-rose-300 flex items-center gap-1">
+                    <LogOut className="w-3 h-3 text-rose-400" />
+                    <span>Desligar do App (Sair)</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5 leading-snug">
+                    Desconecta a sessão para o próximo porteiro entrar com a senha pessoal.
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -253,7 +324,7 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -261,17 +332,21 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
             type="button"
             onClick={handleFinishShift}
             disabled={signedSuccess}
-            className="flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg shadow-md transition-colors"
+            className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white rounded-lg shadow-md transition-colors cursor-pointer ${
+              disconnectToLogin
+                ? 'bg-rose-600 hover:bg-rose-500'
+                : 'bg-amber-600 hover:bg-amber-500'
+            }`}
           >
             {signedSuccess ? (
               <>
                 <Check className="w-4 h-4 text-white" />
-                <span>Turno Encerrado com Sucesso!</span>
+                <span>Turno Encerrado e Transferido!</span>
               </>
             ) : (
               <>
-                <span>Assinar & Transferir Posto</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{disconnectToLogin ? 'Encerrar Turno & Desligar' : 'Assinar & Transferir Posto'}</span>
+                {disconnectToLogin ? <LogOut className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
               </>
             )}
           </button>

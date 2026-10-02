@@ -21,10 +21,13 @@ import { CondoConfig, User, WhatsAppTemplate, AuditLog } from '../types';
 
 export const AdminSettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'condo' | 'users' | 'templates' | 'logs' | 'backup'>('condo');
+  const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
   const [condo, setCondo] = useState<CondoConfig>(storage.getCondo());
   const [users, setUsers] = useState<User[]>(storage.getUsers());
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>(storage.getWhatsAppTemplates());
   const [logs, setLogs] = useState<AuditLog[]>(storage.getAuditLogs());
+  const [selectedCondoFilter, setSelectedCondoFilter] = useState<string>('all');
+  const clientCondos = storage.getClientCondos();
 
   // Editing state for users
   const [showUserModal, setShowUserModal] = useState(false);
@@ -49,11 +52,19 @@ export const AdminSettingsView: React.FC = () => {
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   const refreshData = () => {
+    setCurrentUser(storage.getCurrentUser());
     setCondo(storage.getCondo());
     setUsers(storage.getUsers());
     setTemplates(storage.getWhatsAppTemplates());
     setLogs(storage.getAuditLogs());
   };
+
+  const displayedUsers =
+    currentUser.role === 'dev'
+      ? selectedCondoFilter === 'all'
+        ? users
+        : users.filter((u) => u.condoId === selectedCondoFilter)
+      : users.filter((u) => !u.condoId || u.condoId === condo.id);
 
   useEffect(() => {
     refreshData();
@@ -112,6 +123,8 @@ export const AdminSettingsView: React.FC = () => {
       role: isDev ? 'dev' : userRole,
       phone: userPhone,
       active: userActive,
+      condoId: isDev ? undefined : (editingUser?.condoId || condo.id),
+      condoName: isDev ? undefined : (editingUser?.condoName || condo.name),
       permissions: {
         canManageUsers: isDev ? true : canManageUsers,
         canConfigCondo: isDev ? true : canConfigCondo,
@@ -220,7 +233,7 @@ export const AdminSettingsView: React.FC = () => {
           }`}
         >
           <Users className="w-3.5 h-3.5 text-sky-400" />
-          <span>Usuários & Permissões ({users.length})</span>
+          <span>Usuários & Permissões ({displayedUsers.length})</span>
         </button>
 
         <button
@@ -401,19 +414,17 @@ export const AdminSettingsView: React.FC = () => {
               Identidade Visual & Ícones do Aplicativo (PWA)
             </h4>
             <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-slate-900 shadow-lg shrink-0">
-                  <img src="/pwa-192x192.png" alt="Ícone do Aplicativo" className="w-full h-full object-cover" />
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-emerald-500/50 bg-slate-900 shadow-xl shrink-0">
+                <img src="/app-icon.png" alt="Ícone CAST 360" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>Ícone Oficial CAST 360</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono-tabular">PWA Ready</span>
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span>Ícone Ativo do Portaria360</span>
-                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded">PWA Ready</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Imagem aplicada como ícone nos formatos PWA (192px, 512px, Maskable), Apple Touch Icon (180px) e Favicon de navegador.
-                  </p>
-                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Imagem aplicada como ícone nos formatos PWA (192px, 512px, Maskable), Apple Touch Icon (180px) e Favicon de navegador.
+                </p>
               </div>
             </div>
           </div>
@@ -434,31 +445,54 @@ export const AdminSettingsView: React.FC = () => {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2 flex-wrap">
                 <span>Equipe de Portaria & Operadores</span>
+                <span className="text-[10px] bg-emerald-950/80 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800/60 font-semibold">
+                  {condo.name}
+                </span>
                 <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-normal">
-                  Gerenciado pelo ADM Predial
+                  {currentUser.role === 'dev' ? 'Modo Master Developer' : 'Gerenciado pelo ADM Predial'}
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Cadastre os porteiros que operam a guarita e gerenciam as entradas e encomendas.
+                {currentUser.role === 'dev'
+                  ? 'Painel Dev Master: visualização e auditoria de usuários com isolamento multi-condomínio.'
+                  : `Usuários vinculados exclusivamente ao ${condo.name}. Os porteiros cadastrados só visualizam as informações e operam a portaria deste condomínio.`}
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {currentUser.role === 'dev' && (
+                <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
+                  <span className="text-slate-400 text-[11px]">Filtrar:</span>
+                  <select
+                    value={selectedCondoFilter}
+                    onChange={(e) => setSelectedCondoFilter(e.target.value)}
+                    className="bg-transparent text-white text-xs font-medium focus:outline-none cursor-pointer"
+                  >
+                    <option value="all" className="bg-slate-900 text-white">Todos os Condomínios ({users.length})</option>
+                    {clientCondos.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-slate-900 text-white">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   handleOpenUserModal();
                   setUserRole('porteiro');
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Cadastrar Porteiro</span>
               </button>
               <button
                 onClick={() => handleOpenUserModal()}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Outro Perfil</span>
@@ -467,91 +501,115 @@ export const AdminSettingsView: React.FC = () => {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 uppercase text-[10px]">
-                <tr>
-                  <th className="py-3 px-4">Nome</th>
-                  <th className="py-3 px-4">E-mail / Telefone</th>
-                  <th className="py-3 px-4">Perfil</th>
-                  <th className="py-3 px-4">Senha / Acesso</th>
-                  <th className="py-3 px-4">Permissões Especiais</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {users.map((u) => {
-                  const isDev = u.role === 'dev' || u.email.toLowerCase() === 'ale11062@gmail.com';
-                  return (
-                    <tr key={u.id} className={`hover:bg-slate-850/50 ${isDev ? 'bg-purple-950/20' : ''}`}>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-white block">{u.name}</span>
-                        {isDev && (
-                          <span className="text-[10px] text-purple-300 font-bold bg-purple-950 px-1 rounded border border-purple-800 inline-block mt-0.5">
-                            ⚡ Master Developer
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-300">
-                        {u.email} <span className="text-[10px] text-slate-500 block">{u.phone}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold capitalize ${
-                            isDev
-                              ? 'bg-purple-900/60 text-purple-300 border border-purple-700'
-                              : u.role === 'admin'
-                              ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
-                              : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          {isDev ? 'Dev Master' : u.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-300">
-                        <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                          {u.password || '••••••••'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-[10px] space-x-1">
-                        {u.permissions.canManageUsers && (
-                          <span className="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">Gestão Usuários</span>
-                        )}
-                        {u.permissions.canConfigCondo && (
-                          <span className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-300">Config Condomínio</span>
-                        )}
-                        {u.permissions.canDeleteRecords && (
-                          <span className="bg-slate-800 px-1.5 py-0.5 rounded text-rose-300">Excluir Registros</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        {u.active ? (
-                          <span className="text-emerald-400 font-semibold text-[11px]">Ativo</span>
-                        ) : (
-                          <span className="text-rose-400 font-semibold text-[11px]">Desativado</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenUserModal(u)}
-                            className="p-1.5 text-slate-400 hover:text-white"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+            {displayedUsers.length === 0 ? (
+              <div className="p-8 text-center space-y-2">
+                <Users className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-sm font-semibold text-white">Nenhum operador ou porteiro cadastrado para este condomínio.</p>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Como ADM Predial do <strong className="text-slate-200">{condo.name}</strong>, utilize o botão acima para cadastrar a equipe de portaria exclusiva desta unidade.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 uppercase text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Nome</th>
+                      <th className="py-3 px-4">E-mail / Telefone</th>
+                      {currentUser.role === 'dev' && <th className="py-3 px-4">Condomínio</th>}
+                      <th className="py-3 px-4">Perfil</th>
+                      <th className="py-3 px-4">Senha / Acesso</th>
+                      <th className="py-3 px-4">Permissões Especiais</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {displayedUsers.map((u) => {
+                      const isDev = u.role === 'dev' || u.email.toLowerCase() === 'ale11062@gmail.com';
+                      return (
+                        <tr key={u.id} className={`hover:bg-slate-850/50 ${isDev ? 'bg-purple-950/20' : ''}`}>
+                          <td className="py-3 px-4">
+                            <span className="font-semibold text-white block">{u.name}</span>
+                            {isDev ? (
+                              <span className="text-[10px] text-purple-300 font-bold bg-purple-950 px-1 rounded border border-purple-800 inline-block mt-0.5">
+                                ⚡ Master Developer
+                              </span>
+                            ) : u.condoName && currentUser.role === 'dev' ? (
+                              <span className="text-[10px] text-slate-400 block mt-0.5">{u.condoName}</span>
+                            ) : null}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {u.email} <span className="text-[10px] text-slate-500 block">{u.phone}</span>
+                          </td>
+                          {currentUser.role === 'dev' && (
+                            <td className="py-3 px-4">
+                              <span className="text-[11px] text-indigo-300 font-medium bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">
+                                {u.condoName || 'Geral / Dev'}
+                              </span>
+                            </td>
+                          )}
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold capitalize ${
+                                isDev
+                                  ? 'bg-purple-900/60 text-purple-300 border border-purple-700'
+                                  : u.role === 'admin'
+                                  ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+                                  : 'bg-slate-800 text-slate-300'
+                              }`}
+                            >
+                              {isDev ? 'Dev Master' : u.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-300">
+                            <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                              {u.password || '••••••••'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-[10px] space-x-1">
+                            {u.permissions.canManageUsers && (
+                              <span className="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">Gestão Usuários</span>
+                            )}
+                            {u.permissions.canConfigCondo && (
+                              <span className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-300">Config Condomínio</span>
+                            )}
+                            {u.permissions.canDeleteRecords && (
+                              <span className="bg-slate-800 px-1.5 py-0.5 rounded text-rose-300">Excluir Registros</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {u.active ? (
+                              <span className="text-emerald-400 font-semibold text-[11px]">Ativo</span>
+                            ) : (
+                              <span className="text-rose-400 font-semibold text-[11px]">Desativado</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleOpenUserModal(u)}
+                                className="p-1.5 text-slate-400 hover:text-white"
+                                title="Editar Usuário"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-400"
+                                title="Excluir Usuário"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

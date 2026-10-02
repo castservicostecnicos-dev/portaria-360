@@ -91,9 +91,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6">
       {/* Top Banner / Operator Greeting */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-800 shadow-md shrink-0 hidden sm:flex items-center justify-center">
-            <img src="/pwa-192x192.png" alt="Portaria360" className="w-full h-full object-cover" />
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
+            <img src="/app-icon.png" alt="CAST 360" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1">

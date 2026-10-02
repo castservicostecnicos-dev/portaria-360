@@ -54,6 +54,7 @@ const STORAGE_KEYS = {
   CLIENT_CONDOS: 'portaria360_client_condos',
   USERS: 'portaria360_users',
   CURRENT_USER: 'portaria360_current_user',
+  ACTIVE_CONDO_ID: 'portaria360_active_condo_id',
   BLOCKS: 'portaria360_blocks',
   APARTMENTS: 'portaria360_apartments',
   RESIDENTS: 'portaria360_residents',
@@ -89,6 +90,8 @@ class StorageService {
     if (!localStorage.getItem(STORAGE_KEYS.CLIENT_CONDOS)) {
       localStorage.setItem(STORAGE_KEYS.CLIENT_CONDOS, JSON.stringify(SEED_CLIENT_CONDOS));
     }
+    // Ensure starter structure for seeded client condos
+    this.initCondoStarterStructure(SEED_CLIENT_CONDOS[1]); // São Sebastião
   }
 
   public subscribe(callback: () => void): () => void {
@@ -110,7 +113,8 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.CONDO, JSON.stringify(SEED_CONDO));
     localStorage.setItem(STORAGE_KEYS.CLIENT_CONDOS, JSON.stringify(SEED_CLIENT_CONDOS));
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(SEED_USERS[1])); // Default as Porteiro João Pedro
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(SEED_USERS[4])); // Default as Porteiro João Pedro (Solar das Palmeiras)
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_CONDO_ID, 'condo-solar-palmeiras');
     localStorage.setItem(STORAGE_KEYS.BLOCKS, JSON.stringify(SEED_BLOCKS));
     localStorage.setItem(STORAGE_KEYS.APARTMENTS, JSON.stringify(SEED_APARTMENTS));
     localStorage.setItem(STORAGE_KEYS.RESIDENTS, JSON.stringify(SEED_RESIDENTS));
@@ -147,27 +151,165 @@ class StorageService {
     this.notify();
   }
 
+  // Active Condominium determination
+  public getActiveCondoId(): string {
+    const currentUser = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    // If the active operator is bound to a specific condo (admin predial, porteiro, supervisor)
+    if (currentUser && currentUser.role !== 'dev' && currentUser.condoId) {
+      return currentUser.condoId;
+    }
+    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_CONDO_ID);
+    return stored || 'condo-solar-palmeiras';
+  }
+
+  public setActiveCondoId(condoId: string) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_CONDO_ID, condoId);
+    this.notify();
+  }
+
+  public getScopedKey(baseKey: string, specificCondoId?: string): string {
+    const activeCondoId = specificCondoId || this.getActiveCondoId();
+    if (activeCondoId === 'condo-solar-palmeiras' || activeCondoId === 'condo-1') {
+      return baseKey;
+    }
+    return `${baseKey}_${activeCondoId}`;
+  }
+
+  // Starter structure for new client condos
+  public initCondoStarterStructure(condo: ClientCondo) {
+    const blocksKey = `${STORAGE_KEYS.BLOCKS}_${condo.id}`;
+    const aptsKey = `${STORAGE_KEYS.APARTMENTS}_${condo.id}`;
+    const residentsKey = `${STORAGE_KEYS.RESIDENTS}_${condo.id}`;
+
+    if (!localStorage.getItem(blocksKey)) {
+      const blocksCount = condo.blocksCount || 1;
+      const initialBlocks: Block[] = [];
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      for (let i = 0; i < blocksCount; i++) {
+        const letter = alphabet[i] || `${i + 1}`;
+        initialBlocks.push({
+          id: `block-${condo.id}-${letter.toLowerCase()}`,
+          name: blocksCount === 1 ? 'Torre Única' : `Torre ${letter}`,
+          identification: blocksCount === 1 ? 'Torre Principal' : `Bloco ${letter}`,
+          aptsCount: Math.ceil(condo.aptsCount / blocksCount),
+          active: true,
+          notes: `Estrutura inicial do condomínio ${condo.name}`,
+        });
+      }
+      localStorage.setItem(blocksKey, JSON.stringify(initialBlocks));
+
+      // Generate initial apartments
+      const aptsCount = condo.aptsCount || 12;
+      const initialApts: Apartment[] = [];
+      const aptsPerBlock = Math.ceil(aptsCount / blocksCount);
+
+      let currentAptIndex = 0;
+      initialBlocks.forEach((block) => {
+        for (let a = 1; a <= aptsPerBlock && currentAptIndex < aptsCount; a++) {
+          const floor = Math.ceil(a / 4);
+          const unit = a % 4 === 0 ? 4 : a % 4;
+          const aptNum = `${floor}0${unit}`;
+          initialApts.push({
+            id: `apt-${condo.id}-${block.id}-${aptNum}`,
+            number: aptNum,
+            blockId: block.id,
+            floor,
+            status: a === 1 ? 'ocupado' : 'vago',
+            notes: 'Unidade cadastrada na implantação',
+          });
+          currentAptIndex++;
+        }
+      });
+      localStorage.setItem(aptsKey, JSON.stringify(initialApts));
+
+      // Add one initial resident for demo if São Sebastião
+      if (condo.id === 'condo-sao-sebastiao' && !localStorage.getItem(residentsKey) && initialApts.length > 0) {
+        const sampleResidents: Resident[] = [
+          {
+            id: 'res-sebastiao-1',
+            name: 'Ana Paula Ferreira',
+            cpf: '234.567.890-11',
+            rg: '28.987.654-3',
+            birthDate: '1988-04-12',
+            phone: '(11) 98765-4321',
+            whatsapp: '5511987654321',
+            email: 'ana.ferreira@saosebastiao.com.br',
+            apartmentId: initialApts[0].id,
+            blockId: initialBlocks[0].id,
+            type: 'proprietario',
+            active: true,
+            isMainResident: true,
+            isNotificationContact: true,
+            canReceivePackages: true,
+            canAuthorizeVisitors: true,
+            canAuthorizeContractors: true,
+            notes: 'Moradora pontual. Notificações prioritárias via WhatsApp.',
+          },
+        ];
+        localStorage.setItem(residentsKey, JSON.stringify(sampleResidents));
+      }
+    }
+  }
+
   // Current User
   public getCurrentUser(): User {
-    const user = this.getItem<User>(STORAGE_KEYS.CURRENT_USER, SEED_USERS[1]);
-    return user || SEED_USERS[1];
+    const user = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    if (!user) {
+      return {
+        id: 'guest',
+        name: 'Nenhum Operador Conectado',
+        email: '',
+        role: 'porteiro',
+        phone: '',
+        active: false,
+        permissions: {
+          canManageUsers: false,
+          canConfigCondo: false,
+          canDeleteRecords: false,
+          canViewReports: false,
+          canManageSettings: false,
+        },
+      };
+    }
+    return user;
+  }
+
+  public isAuthenticated(): boolean {
+    const user = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    return user !== null && user.id !== 'guest';
+  }
+
+  public logout(): void {
+    const user = this.getCurrentUser();
+    if (user.id !== 'guest') {
+      this.addAuditLog(
+        'Troca de Turno / Desconexão',
+        'Sessão',
+        `Operador ${user.name} (${user.role}) desconectou-se do posto de atendimento para troca de turno.`
+      );
+    }
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    this.notify();
   }
 
   public setCurrentUser(user: User) {
     this.setItem(STORAGE_KEYS.CURRENT_USER, user);
+    if (user.condoId) {
+      this.setActiveCondoId(user.condoId);
+    }
     this.addAuditLog('Troca de Operador Ativo', 'Sessão', `Operador alterado para ${user.name} (${user.role})`);
   }
 
-  // Users
-  public getUsers(): User[] {
+  // Master Users list
+  public getAllUsers(): User[] {
     const list = this.getItem<User[]>(STORAGE_KEYS.USERS, SEED_USERS);
+
     // Ensure the developer account ale11062@gmail.com is always present and up-to-date
     const devIndex = list.findIndex((u) => u.email.toLowerCase() === 'ale11062@gmail.com');
     if (devIndex === -1) {
       list.unshift(SEED_USERS[0]);
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
     } else {
-      // Ensure password and role are correctly set
       if (list[devIndex].password !== 'cast@2468' || list[devIndex].role !== 'dev') {
         list[devIndex].password = 'cast@2468';
         list[devIndex].role = 'dev';
@@ -181,11 +323,72 @@ class StorageService {
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
       }
     }
+
+    // Ensure seed users have their condoId assigned if missing
+    let updated = false;
+    list.forEach((u) => {
+      if (u.role !== 'dev' && !u.condoId) {
+        const seedMatch = SEED_USERS.find((s) => s.email.toLowerCase() === u.email.toLowerCase());
+        if (seedMatch && seedMatch.condoId) {
+          u.condoId = seedMatch.condoId;
+          u.condoName = seedMatch.condoName;
+          updated = true;
+        } else {
+          u.condoId = 'condo-solar-palmeiras';
+          u.condoName = 'Residencial Solar das Palmeiras';
+          updated = true;
+        }
+      }
+    });
+
+    // Ensure Pedro Silveira (porteiro of São Sebastião) is in the users list
+    if (!list.some((u) => u.email.toLowerCase() === 'pedro.portaria@saosebastiao.com.br')) {
+      const pedro = SEED_USERS.find((s) => s.email.toLowerCase() === 'pedro.portaria@saosebastiao.com.br');
+      if (pedro) {
+        list.push(pedro);
+        updated = true;
+      }
+    }
+
+    // Ensure João Silva (ADM of São Sebastião) has condoId 'condo-sao-sebastiao'
+    const joaoIdx = list.findIndex((u) => u.email.toLowerCase() === 'joao.adm@saosebastiao.com.br');
+    if (joaoIdx >= 0 && list[joaoIdx].condoId !== 'condo-sao-sebastiao') {
+      list[joaoIdx].condoId = 'condo-sao-sebastiao';
+      list[joaoIdx].condoName = 'Condomínio Edifício São Sebastião';
+      updated = true;
+    }
+
+    if (updated) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
+    }
+
     return list;
   }
 
+  // Users getter with strict separation
+  // An ADM Predial or Porteiro or Supervisor CAN ONLY see users of their own condo!
+  public getUsers(targetCondoId?: string): User[] {
+    const allUsers = this.getAllUsers();
+    const currentUser = this.getCurrentUser();
+
+    // Explicit condo requested (e.g. by Dev Master filtering)
+    if (targetCondoId) {
+      return allUsers.filter((u) => u.condoId === targetCondoId);
+    }
+
+    // If logged in as Master Developer (Dev):
+    if (currentUser.role === 'dev') {
+      return allUsers;
+    }
+
+    // STRICT REQUIREMENT: ADM Predial or Porteiro or Supervisor
+    // CAN ONLY SEE USERS BELONGING TO THEIR OWN ASSIGNED CONDOMINIUM!
+    const userCondoId = currentUser.condoId || this.getActiveCondoId();
+    return allUsers.filter((u) => u.condoId === userCondoId);
+  }
+
   public authenticate(email: string, password: string): { success: boolean; user?: User; message: string } {
-    const users = this.getUsers();
+    const users = this.getAllUsers();
     const cleanEmail = email.trim().toLowerCase();
     const user = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
 
@@ -204,6 +407,12 @@ class StorageService {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     user.lastLogin = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    // Automatically switch active condo to the user's condo
+    if (user.condoId) {
+      this.setActiveCondoId(user.condoId);
+    }
+
     this.saveUser(user);
     this.setCurrentUser(user);
     this.addAuditLog('Login de Usuário', 'Autenticação', `Usuário ${user.name} (${user.email}) autenticado com sucesso`);
@@ -212,7 +421,7 @@ class StorageService {
   }
 
   public recoverPassword(email: string): { success: boolean; message: string; recoveredPassword?: string } {
-    const users = this.getUsers();
+    const users = this.getAllUsers();
     const cleanEmail = email.trim().toLowerCase();
     const user = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
 
@@ -231,20 +440,38 @@ class StorageService {
   }
 
   public saveUser(user: User) {
-    const users = this.getUsers();
+    const activeCondoId = this.getActiveCondoId();
+    const condo = this.getCondo();
+
+    // If user has no condoId, automatically assign the active condo
+    if (user.role !== 'dev' && !user.condoId) {
+      user.condoId = activeCondoId;
+      user.condoName = condo.name;
+    }
+
+    const users = this.getAllUsers();
     const idx = users.findIndex((u) => u.id === user.id);
     if (idx >= 0) {
       users[idx] = user;
-      this.addAuditLog('Atualização de Usuário', 'Usuários', `Usuário ${user.name} atualizado`);
+      this.addAuditLog(
+        'Atualização de Usuário',
+        'Usuários',
+        `Usuário ${user.name} atualizado no condomínio ${user.condoName || condo.name}`
+      );
     } else {
       users.push(user);
-      this.addAuditLog('Cadastro de Usuário', 'Usuários', `Novo usuário ${user.name} (${user.role}) cadastrado`);
+      this.addAuditLog(
+        'Cadastro de Usuário',
+        'Usuários',
+        `Novo usuário ${user.name} (${user.role}) cadastrado no condomínio ${user.condoName || condo.name}`
+      );
     }
     this.setItem(STORAGE_KEYS.USERS, users);
+    firestoreSync.syncUser(user);
   }
 
   public deleteUser(userId: string) {
-    let users = this.getUsers();
+    let users = this.getAllUsers();
     const target = users.find((u) => u.id === userId);
     users = users.filter((u) => u.id !== userId);
     this.setItem(STORAGE_KEYS.USERS, users);
@@ -261,6 +488,7 @@ class StorageService {
   public saveClientCondo(condo: ClientCondo) {
     const list = this.getClientCondos();
     const idx = list.findIndex((c) => c.id === condo.id);
+    const isNew = idx === -1;
     if (idx >= 0) {
       list[idx] = condo;
       this.addAuditLog('Atualização de Condomínio', 'Dev Master', `Condomínio ${condo.name} atualizado pelo desenvolvedor`);
@@ -271,20 +499,22 @@ class StorageService {
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
     firestoreSync.syncClientCondo(condo);
 
-    // Sync ADM Predial into Users table so they can log in immediately
+    // Sync ADM Predial into Users table with STRICT condoId
     if (condo.admPredial && condo.admPredial.email) {
-      const users = this.getUsers();
+      const users = this.getAllUsers();
       const existingUserIdx = users.findIndex(
         (u) => u.id === condo.admPredial.id || u.email.toLowerCase() === condo.admPredial.email.toLowerCase()
       );
       const admUser: User = {
-        id: condo.admPredial.id || `user-adm-${Date.now()}`,
+        id: condo.admPredial.id || `user-adm-${condo.id}`,
         name: `${condo.admPredial.name}`,
         email: condo.admPredial.email,
         password: condo.admPredial.password || 'senha123',
         phone: condo.admPredial.phone || '',
         role: 'admin',
         active: condo.active,
+        condoId: condo.id,
+        condoName: condo.name,
         permissions: {
           canManageUsers: true,
           canConfigCondo: true,
@@ -305,6 +535,11 @@ class StorageService {
       }
       this.setItem(STORAGE_KEYS.USERS, users);
       firestoreSync.syncUser(admUser);
+    }
+
+    // Initialize starter structure if new condo
+    if (isNew) {
+      this.initCondoStarterStructure(condo);
     }
   }
 
@@ -330,7 +565,7 @@ class StorageService {
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
 
     // Also toggle the active status of the ADM Predial user
-    const users = this.getUsers();
+    const users = this.getAllUsers();
     const admEmail = list[idx].admPredial.email.toLowerCase();
     const userIdx = users.findIndex((u) => u.email.toLowerCase() === admEmail);
     if (userIdx >= 0) {
@@ -359,7 +594,7 @@ class StorageService {
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
 
     // Also sync to Users
-    const users = this.getUsers();
+    const users = this.getAllUsers();
     const admEmail = list[idx].admPredial.email.toLowerCase();
     const userIdx = users.findIndex((u) => u.email.toLowerCase() === admEmail);
     if (userIdx >= 0) {
@@ -385,95 +620,154 @@ class StorageService {
     const target = list.find((c) => c.id === condoId);
     if (!target) return { success: false };
 
-    // Update active condo config
-    const current = this.getCondo();
-    const updated: CondoConfig = {
-      ...current,
-      id: target.id,
-      name: target.name,
-      cnpj: target.cnpj || current.cnpj,
-      address: target.address,
-      city: target.city,
-      state: target.state,
-      phone: target.phone,
-      email: target.email,
-      blocksCount: target.blocksCount,
-      aptsCount: target.aptsCount,
-    };
-    this.saveCondo(updated);
+    this.setActiveCondoId(target.id);
     this.addAuditLog('Troca de Contexto Condomínio', 'Dev Master', `Visualização do condomínio ${target.name} iniciada`);
     return { success: true, condo: target };
   }
 
   // Condo Config
-  public getCondo(): CondoConfig {
+  public getCondo(specificCondoId?: string): CondoConfig {
+    const activeId = specificCondoId || this.getActiveCondoId();
+    if (activeId === 'condo-solar-palmeiras' || activeId === 'condo-1') {
+      const config = this.getItem<CondoConfig>(STORAGE_KEYS.CONDO, SEED_CONDO);
+      if (!config.logoUrl || config.logoUrl.includes('condo_logo_crest')) {
+        config.logoUrl = '/app-icon.png';
+        localStorage.setItem(STORAGE_KEYS.CONDO, JSON.stringify(config));
+      }
+      return config;
+    }
+
+    const clientCondos = this.getClientCondos();
+    const client = clientCondos.find((c) => c.id === activeId);
+    const customConfig = this.getItem<Partial<CondoConfig>>(`${STORAGE_KEYS.CONDO}_${activeId}`, {});
+
+    if (client) {
+      return {
+        id: client.id,
+        name: client.name,
+        cnpj: client.cnpj || '',
+        address: client.address,
+        cep: client.cep || '',
+        city: client.city,
+        state: client.state,
+        phone: client.phone,
+        email: client.email,
+        logoUrl: customConfig.logoUrl || '/app-icon.png',
+        facadeUrl: customConfig.facadeUrl || '',
+        blocksCount: client.blocksCount,
+        aptsCount: client.aptsCount,
+        rules: customConfig.rules || {
+          deliveryHours: '08:00 às 22:00 todos os dias',
+          quietHours: '22:00 às 08:00 (Lei do Silêncio)',
+          movingHours: 'Segunda a Sexta das 08h às 17h, Sábado das 08h às 12h (proibido domingos e feriados)',
+          visitorPolicy: 'Acesso liberado apenas com confirmação prévia do morador via interfone ou WhatsApp. Identificação com documento com foto obrigatória.',
+        },
+      };
+    }
+
     return this.getItem<CondoConfig>(STORAGE_KEYS.CONDO, SEED_CONDO);
   }
 
   public saveCondo(config: CondoConfig) {
-    this.setItem(STORAGE_KEYS.CONDO, config);
+    const activeId = config.id || this.getActiveCondoId();
+    if (activeId === 'condo-solar-palmeiras' || activeId === 'condo-1') {
+      this.setItem(STORAGE_KEYS.CONDO, config);
+    } else {
+      this.setItem(`${STORAGE_KEYS.CONDO}_${activeId}`, config);
+      // Also sync back to ClientCondos list
+      const clientCondos = this.getClientCondos();
+      const idx = clientCondos.findIndex((c) => c.id === activeId);
+      if (idx >= 0) {
+        clientCondos[idx] = {
+          ...clientCondos[idx],
+          name: config.name,
+          cnpj: config.cnpj || clientCondos[idx].cnpj,
+          address: config.address,
+          city: config.city,
+          state: config.state,
+          phone: config.phone,
+          email: config.email,
+          blocksCount: config.blocksCount,
+          aptsCount: config.aptsCount,
+        };
+        this.setItem(STORAGE_KEYS.CLIENT_CONDOS, clientCondos);
+        firestoreSync.syncClientCondo(clientCondos[idx]);
+      }
+    }
     this.addAuditLog('Configuração do Condomínio', 'Condomínio', `Dados do condomínio ${config.name} atualizados`);
     firestoreSync.syncCondo(config);
   }
 
   // Blocks
   public getBlocks(): Block[] {
-    return this.getItem<Block[]>(STORAGE_KEYS.BLOCKS, SEED_BLOCKS);
+    const key = this.getScopedKey(STORAGE_KEYS.BLOCKS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_BLOCKS : [];
+    return this.getItem<Block[]>(key, defaultValue);
   }
 
   public saveBlock(block: Block) {
+    const key = this.getScopedKey(STORAGE_KEYS.BLOCKS);
     const blocks = this.getBlocks();
     const idx = blocks.findIndex((b) => b.id === block.id);
     if (idx >= 0) blocks[idx] = block;
     else blocks.push(block);
-    this.setItem(STORAGE_KEYS.BLOCKS, blocks);
+    this.setItem(key, blocks);
     this.addAuditLog('Bloco/Torre', 'Estrutura', `Bloco ${block.name} salvo`);
   }
 
   public deleteBlock(blockId: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.BLOCKS);
     const blocks = this.getBlocks().filter((b) => b.id !== blockId);
-    this.setItem(STORAGE_KEYS.BLOCKS, blocks);
+    this.setItem(key, blocks);
     this.addAuditLog('Bloco/Torre', 'Estrutura', `Bloco ${blockId} removido`);
   }
 
   // Apartments
   public getApartments(): Apartment[] {
-    return this.getItem<Apartment[]>(STORAGE_KEYS.APARTMENTS, SEED_APARTMENTS);
+    const key = this.getScopedKey(STORAGE_KEYS.APARTMENTS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_APARTMENTS : [];
+    return this.getItem<Apartment[]>(key, defaultValue);
   }
 
   public saveApartment(apt: Apartment) {
+    const key = this.getScopedKey(STORAGE_KEYS.APARTMENTS);
     const apts = this.getApartments();
     const idx = apts.findIndex((a) => a.id === apt.id);
     if (idx >= 0) apts[idx] = apt;
     else apts.push(apt);
-    this.setItem(STORAGE_KEYS.APARTMENTS, apts);
+    this.setItem(key, apts);
     this.addAuditLog('Apartamento', 'Unidade', `Apartamento ${apt.number} salvo`);
   }
 
   public deleteApartment(aptId: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.APARTMENTS);
     const apts = this.getApartments().filter((a) => a.id !== aptId);
-    this.setItem(STORAGE_KEYS.APARTMENTS, apts);
+    this.setItem(key, apts);
     this.addAuditLog('Apartamento', 'Unidade', `Apartamento ${aptId} removido`);
   }
 
   // Residents
   public getResidents(): Resident[] {
-    return this.getItem<Resident[]>(STORAGE_KEYS.RESIDENTS, SEED_RESIDENTS);
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENTS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_RESIDENTS : [];
+    return this.getItem<Resident[]>(key, defaultValue);
   }
 
   public saveResident(resident: Resident) {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENTS);
     const list = this.getResidents();
     const idx = list.findIndex((r) => r.id === resident.id);
     if (idx >= 0) list[idx] = resident;
     else list.push(resident);
-    this.setItem(STORAGE_KEYS.RESIDENTS, list);
+    this.setItem(key, list);
     this.addAuditLog('Morador', 'Cadastro', `Morador(a) ${resident.name} salvo(a)`);
   }
 
   public deleteResident(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENTS);
     const list = this.getResidents();
     const target = list.find((r) => r.id === id);
-    this.setItem(STORAGE_KEYS.RESIDENTS, list.filter((r) => r.id !== id));
+    this.setItem(key, list.filter((r) => r.id !== id));
     if (target) {
       this.addAuditLog('Exclusão Morador', 'Cadastro', `Morador ${target.name} excluído`);
     }
@@ -481,229 +775,308 @@ class StorageService {
 
   // Visitors
   public getVisitors(): Visitor[] {
-    return this.getItem<Visitor[]>(STORAGE_KEYS.VISITORS, SEED_VISITORS);
+    const key = this.getScopedKey(STORAGE_KEYS.VISITORS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_VISITORS : [];
+    return this.getItem<Visitor[]>(key, defaultValue);
   }
 
   public saveVisitor(visitor: Visitor) {
+    const key = this.getScopedKey(STORAGE_KEYS.VISITORS);
     const list = this.getVisitors();
     const idx = list.findIndex((v) => v.id === visitor.id);
     if (idx >= 0) list[idx] = visitor;
     else list.push(visitor);
-    this.setItem(STORAGE_KEYS.VISITORS, list);
+    this.setItem(key, list);
     this.addAuditLog('Visitante', 'Visitantes', `Visitante ${visitor.name} salvo(a)`);
   }
 
   public deleteVisitor(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.VISITORS);
     const list = this.getVisitors().filter((v) => v.id !== id);
-    this.setItem(STORAGE_KEYS.VISITORS, list);
+    this.setItem(key, list);
     this.addAuditLog('Visitante', 'Visitantes', `Visitante ${id} removido`);
   }
 
   // Contractors
   public getContractors(): Contractor[] {
-    return this.getItem<Contractor[]>(STORAGE_KEYS.CONTRACTORS, SEED_CONTRACTORS);
+    const key = this.getScopedKey(STORAGE_KEYS.CONTRACTORS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_CONTRACTORS : [];
+    return this.getItem<Contractor[]>(key, defaultValue);
   }
 
   public saveContractor(contractor: Contractor) {
+    const key = this.getScopedKey(STORAGE_KEYS.CONTRACTORS);
     const list = this.getContractors();
     const idx = list.findIndex((c) => c.id === contractor.id);
     if (idx >= 0) list[idx] = contractor;
     else list.push(contractor);
-    this.setItem(STORAGE_KEYS.CONTRACTORS, list);
+    this.setItem(key, list);
     this.addAuditLog('Prestador de Serviço', 'Prestadores', `Prestador ${contractor.name} (${contractor.company}) salvo`);
   }
 
   public deleteContractor(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.CONTRACTORS);
     const list = this.getContractors().filter((c) => c.id !== id);
-    this.setItem(STORAGE_KEYS.CONTRACTORS, list);
+    this.setItem(key, list);
     this.addAuditLog('Prestador de Serviço', 'Prestadores', `Prestador ${id} removido`);
   }
 
   // Public Agents
   public getPublicAgents(): PublicAgent[] {
-    return this.getItem<PublicAgent[]>(STORAGE_KEYS.PUBLIC_AGENTS, SEED_PUBLIC_AGENTS);
+    const key = this.getScopedKey(STORAGE_KEYS.PUBLIC_AGENTS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_PUBLIC_AGENTS : [];
+    return this.getItem<PublicAgent[]>(key, defaultValue);
   }
 
   public savePublicAgent(agent: PublicAgent) {
+    const key = this.getScopedKey(STORAGE_KEYS.PUBLIC_AGENTS);
     const list = this.getPublicAgents();
     const idx = list.findIndex((a) => a.id === agent.id);
     if (idx >= 0) list[idx] = agent;
     else list.push(agent);
-    this.setItem(STORAGE_KEYS.PUBLIC_AGENTS, list);
+    this.setItem(key, list);
     this.addAuditLog('Agente Público', 'Órgãos Públicos', `${agent.agency}: ${agent.name} registrado`);
   }
 
   public deletePublicAgent(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.PUBLIC_AGENTS);
     const list = this.getPublicAgents().filter((a) => a.id !== id);
-    this.setItem(STORAGE_KEYS.PUBLIC_AGENTS, list);
+    this.setItem(key, list);
     this.addAuditLog('Agente Público', 'Órgãos Públicos', `Agente ${id} removido`);
   }
 
   // Vehicles
   public getVehicles(): Vehicle[] {
-    return this.getItem<Vehicle[]>(STORAGE_KEYS.VEHICLES, SEED_VEHICLES);
+    const key = this.getScopedKey(STORAGE_KEYS.VEHICLES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_VEHICLES : [];
+    return this.getItem<Vehicle[]>(key, defaultValue);
   }
 
   public saveVehicle(veh: Vehicle) {
+    const key = this.getScopedKey(STORAGE_KEYS.VEHICLES);
     const list = this.getVehicles();
     const idx = list.findIndex((v) => v.id === veh.id);
     if (idx >= 0) list[idx] = veh;
     else list.push(veh);
-    this.setItem(STORAGE_KEYS.VEHICLES, list);
+    this.setItem(key, list);
     this.addAuditLog('Veículo', 'Garagem', `Veículo placa ${veh.plate} (${veh.model}) salvo`);
   }
 
   public deleteVehicle(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.VEHICLES);
     const list = this.getVehicles().filter((v) => v.id !== id);
-    this.setItem(STORAGE_KEYS.VEHICLES, list);
+    this.setItem(key, list);
     this.addAuditLog('Veículo', 'Garagem', `Veículo ${id} removido`);
   }
 
   // Access Logs
   public getAccessLogs(): AccessLog[] {
-    return this.getItem<AccessLog[]>(STORAGE_KEYS.ACCESS_LOGS, SEED_ACCESS_LOGS);
+    const key = this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_ACCESS_LOGS : [];
+    return this.getItem<AccessLog[]>(key, defaultValue);
   }
 
   public saveAccessLog(log: AccessLog) {
+    const key = this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS);
     const list = this.getAccessLogs();
     const idx = list.findIndex((l) => l.id === log.id);
     if (idx >= 0) list[idx] = log;
     else list.unshift(log); // Newer on top
-    this.setItem(STORAGE_KEYS.ACCESS_LOGS, list);
+    this.setItem(key, list);
     this.addAuditLog('Controle de Acesso', 'Acesso', `${log.personType.toUpperCase()}: ${log.personName} - Status: ${log.status}`);
   }
 
   // Deliveries
   public getDeliveries(): DeliveryItem[] {
-    return this.getItem<DeliveryItem[]>(STORAGE_KEYS.DELIVERIES, SEED_DELIVERIES);
+    const key = this.getScopedKey(STORAGE_KEYS.DELIVERIES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_DELIVERIES : [];
+    return this.getItem<DeliveryItem[]>(key, defaultValue);
   }
 
   public saveDelivery(del: DeliveryItem) {
+    const key = this.getScopedKey(STORAGE_KEYS.DELIVERIES);
     const list = this.getDeliveries();
     const idx = list.findIndex((d) => d.id === del.id);
     if (idx >= 0) list[idx] = del;
     else list.unshift(del);
-    this.setItem(STORAGE_KEYS.DELIVERIES, list);
+    this.setItem(key, list);
     this.addAuditLog('Encomendas / Recebimentos', 'Recebimento', `${del.type.toUpperCase()} ${del.code} para ${del.recipientName} - Status: ${del.status}`);
   }
 
   // Occurrences
   public getOccurrences(): Occurrence[] {
-    return this.getItem<Occurrence[]>(STORAGE_KEYS.OCCURRENCES, SEED_OCCURRENCES);
+    const key = this.getScopedKey(STORAGE_KEYS.OCCURRENCES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_OCCURRENCES : [];
+    return this.getItem<Occurrence[]>(key, defaultValue);
   }
 
   public saveOccurrence(occ: Occurrence) {
+    const key = this.getScopedKey(STORAGE_KEYS.OCCURRENCES);
     const list = this.getOccurrences();
     const idx = list.findIndex((o) => o.id === occ.id);
     if (idx >= 0) list[idx] = occ;
     else list.unshift(occ);
-    this.setItem(STORAGE_KEYS.OCCURRENCES, list);
+    this.setItem(key, list);
     this.addAuditLog('Livro de Ocorrências', 'Ocorrência', `Ocorrência ${occ.type} em ${occ.location} - Status: ${occ.status}`);
   }
 
   // Lost and Found
   public getLostFound(): LostFoundItem[] {
-    return this.getItem<LostFoundItem[]>(STORAGE_KEYS.LOST_FOUND, SEED_LOST_FOUND);
+    const key = this.getScopedKey(STORAGE_KEYS.LOST_FOUND);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_LOST_FOUND : [];
+    return this.getItem<LostFoundItem[]>(key, defaultValue);
   }
 
   public saveLostFound(item: LostFoundItem) {
+    const key = this.getScopedKey(STORAGE_KEYS.LOST_FOUND);
     const list = this.getLostFound();
     const idx = list.findIndex((i) => i.id === item.id);
     if (idx >= 0) list[idx] = item;
     else list.unshift(item);
-    this.setItem(STORAGE_KEYS.LOST_FOUND, list);
+    this.setItem(key, list);
     this.addAuditLog('Achados e Perdidos', 'Item', `${item.item} - Status: ${item.status}`);
   }
 
   // Keys & Remote tags
   public getKeys(): KeyControl[] {
-    return this.getItem<KeyControl[]>(STORAGE_KEYS.KEYS, SEED_KEYS);
+    const key = this.getScopedKey(STORAGE_KEYS.KEYS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_KEYS : [];
+    return this.getItem<KeyControl[]>(key, defaultValue);
   }
 
   public saveKey(key: KeyControl) {
+    const scopedKey = this.getScopedKey(STORAGE_KEYS.KEYS);
     const list = this.getKeys();
     const idx = list.findIndex((k) => k.id === key.id);
     if (idx >= 0) list[idx] = key;
     else list.unshift(key);
-    this.setItem(STORAGE_KEYS.KEYS, list);
+    this.setItem(scopedKey, list);
     this.addAuditLog('Chaves e Controles', 'Controle', `${key.type.toUpperCase()} ${key.number} (${key.identification}) - ${key.status}`);
   }
 
   // Authorizations
   public getAuthorizations(): Authorization[] {
-    return this.getItem<Authorization[]>(STORAGE_KEYS.AUTHORIZATIONS, SEED_AUTHORIZATIONS);
+    const key = this.getScopedKey(STORAGE_KEYS.AUTHORIZATIONS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_AUTHORIZATIONS : [];
+    return this.getItem<Authorization[]>(key, defaultValue);
   }
 
   public saveAuthorization(auth: Authorization) {
+    const key = this.getScopedKey(STORAGE_KEYS.AUTHORIZATIONS);
     const list = this.getAuthorizations();
     const idx = list.findIndex((a) => a.id === auth.id);
     if (idx >= 0) list[idx] = auth;
     else list.unshift(auth);
-    this.setItem(STORAGE_KEYS.AUTHORIZATIONS, list);
+    this.setItem(key, list);
     this.addAuditLog('Autorização', 'Acesso', `Autorização para ${auth.authorizedName} (${auth.type}) salva`);
   }
 
   // Special services / Removals / Works
   public getSpecialServices(): SpecialService[] {
-    return this.getItem<SpecialService[]>(STORAGE_KEYS.SPECIAL_SERVICES, SEED_SPECIAL_SERVICES);
+    const key = this.getScopedKey(STORAGE_KEYS.SPECIAL_SERVICES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_SPECIAL_SERVICES : [];
+    return this.getItem<SpecialService[]>(key, defaultValue);
   }
 
   public saveSpecialService(spec: SpecialService) {
+    const key = this.getScopedKey(STORAGE_KEYS.SPECIAL_SERVICES);
     const list = this.getSpecialServices();
     const idx = list.findIndex((s) => s.id === spec.id);
     if (idx >= 0) list[idx] = spec;
     else list.unshift(spec);
-    this.setItem(STORAGE_KEYS.SPECIAL_SERVICES, list);
+    this.setItem(key, list);
     this.addAuditLog('Serviço Especial / Mudança', 'Operações', `${spec.type.toUpperCase()}: ${spec.responsibleName}`);
   }
 
   // Shift entries
   public getShiftEntries(): ShiftEntry[] {
-    return this.getItem<ShiftEntry[]>(STORAGE_KEYS.SHIFT_ENTRIES, SEED_SHIFT_ENTRIES);
+    const key = this.getScopedKey(STORAGE_KEYS.SHIFT_ENTRIES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_SHIFT_ENTRIES : [];
+    return this.getItem<ShiftEntry[]>(key, defaultValue);
   }
 
   public saveShiftEntry(entry: ShiftEntry) {
+    const key = this.getScopedKey(STORAGE_KEYS.SHIFT_ENTRIES);
     const list = this.getShiftEntries();
     const idx = list.findIndex((e) => e.id === entry.id);
     if (idx >= 0) list[idx] = entry;
     else list.unshift(entry);
-    this.setItem(STORAGE_KEYS.SHIFT_ENTRIES, list);
+    this.setItem(key, list);
     this.addAuditLog('Turno da Portaria', 'Passagem de Turno', `Turno ${entry.shiftTurn} atualizado`);
   }
 
   // WhatsApp Templates
   public getWhatsAppTemplates(): WhatsAppTemplate[] {
-    return this.getItem<WhatsAppTemplate[]>(STORAGE_KEYS.WHATSAPP_TEMPLATES, SEED_WHATSAPP_TEMPLATES);
+    const key = this.getScopedKey(STORAGE_KEYS.WHATSAPP_TEMPLATES);
+    return this.getItem<WhatsAppTemplate[]>(key, SEED_WHATSAPP_TEMPLATES);
   }
 
   public saveWhatsAppTemplate(template: WhatsAppTemplate) {
+    const key = this.getScopedKey(STORAGE_KEYS.WHATSAPP_TEMPLATES);
     const list = this.getWhatsAppTemplates();
     const idx = list.findIndex((t) => t.id === template.id);
     if (idx >= 0) list[idx] = template;
     else list.push(template);
-    this.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATES, list);
+    this.setItem(key, list);
     this.addAuditLog('Template WhatsApp', 'Comunicação', `Modelo "${template.title}" salvo`);
   }
 
   // CCTV Cameras
   public getCCTVCameras(): CCTVCamera[] {
-    return this.getItem<CCTVCamera[]>(STORAGE_KEYS.CCTV_CAMERAS, SEED_CCTV_CAMERAS);
+    const key = this.getScopedKey(STORAGE_KEYS.CCTV_CAMERAS);
+    const activeId = this.getActiveCondoId();
+    let defaultCameras = SEED_CCTV_CAMERAS;
+    if (activeId !== 'condo-solar-palmeiras') {
+      defaultCameras = [
+        {
+          id: `cam-${activeId}-1`,
+          name: 'Portão Social / Pedestres',
+          zone: 'Entrada Social',
+          location: 'Acesso Principal',
+          status: 'online',
+          feedType: 'image_feed',
+          snapshotUrl: '/src/assets/images/cctv_entrance_gate_1790763519317.jpg',
+          brand: 'Intelbras Multi-HD',
+          dvrHost: '192.168.1.100',
+          dvrChannel: 1,
+          isRecording: true,
+          resolution: '1080p FHD',
+        },
+        {
+          id: `cam-${activeId}-2`,
+          name: 'Hall e Recepção',
+          zone: 'Hall Social',
+          location: 'Térreo',
+          status: 'online',
+          feedType: 'image_feed',
+          snapshotUrl: '/src/assets/images/cctv_lobby_view_1790763531511.jpg',
+          brand: 'Intelbras Multi-HD',
+          dvrHost: '192.168.1.100',
+          dvrChannel: 2,
+          isRecording: true,
+          resolution: '1080p FHD',
+        },
+      ];
+    }
+    return this.getItem<CCTVCamera[]>(key, defaultCameras);
   }
 
   public saveCCTVCamera(camera: CCTVCamera) {
+    const key = this.getScopedKey(STORAGE_KEYS.CCTV_CAMERAS);
     const list = this.getCCTVCameras();
     const idx = list.findIndex((c) => c.id === camera.id);
     if (idx >= 0) list[idx] = camera;
     else list.push(camera);
-    this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list);
+    this.setItem(key, list);
     firestoreSync.syncCCTVCamera(camera);
     this.addAuditLog('Câmera CFTV', 'Segurança', `Câmera ${camera.name} (${camera.location}) configurada`);
   }
 
   public deleteCCTVCamera(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.CCTV_CAMERAS);
     const list = this.getCCTVCameras();
     const target = list.find((c) => c.id === id);
-    this.setItem(STORAGE_KEYS.CCTV_CAMERAS, list.filter((c) => c.id !== id));
+    this.setItem(key, list.filter((c) => c.id !== id));
     firestoreSync.deleteCCTVCamera(id);
     if (target) {
       this.addAuditLog('Câmera CFTV Removida', 'Segurança', `Câmera ${target.name} removida`);
@@ -712,22 +1085,26 @@ class StorageService {
 
   // Communication Notices (Mural de Avisos)
   public getNotices(): CommunicationNotice[] {
-    return this.getItem<CommunicationNotice[]>(STORAGE_KEYS.COMMUNICATION_NOTICES, SEED_COMMUNICATION_NOTICES);
+    const key = this.getScopedKey(STORAGE_KEYS.COMMUNICATION_NOTICES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_COMMUNICATION_NOTICES : [];
+    return this.getItem<CommunicationNotice[]>(key, defaultValue);
   }
 
   public saveNotice(notice: CommunicationNotice) {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMUNICATION_NOTICES);
     const list = this.getNotices();
     const idx = list.findIndex((n) => n.id === notice.id);
     if (idx >= 0) list[idx] = notice;
     else list.unshift(notice);
-    this.setItem(STORAGE_KEYS.COMMUNICATION_NOTICES, list);
+    this.setItem(key, list);
     this.addAuditLog('Comunicado Geral', 'Comunicação', `Comunicado "${notice.title}" (${notice.category}) publicado`);
   }
 
   public deleteNotice(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMUNICATION_NOTICES);
     const list = this.getNotices();
     const target = list.find((n) => n.id === id);
-    this.setItem(STORAGE_KEYS.COMMUNICATION_NOTICES, list.filter((n) => n.id !== id));
+    this.setItem(key, list.filter((n) => n.id !== id));
     if (target) {
       this.addAuditLog('Exclusão de Comunicado', 'Comunicação', `Comunicado "${target.title}" removido`);
     }
@@ -735,7 +1112,9 @@ class StorageService {
 
   // Audit Logs
   public getAuditLogs(): AuditLog[] {
-    return this.getItem<AuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, SEED_AUDIT_LOGS);
+    const key = this.getScopedKey(STORAGE_KEYS.AUDIT_LOGS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_AUDIT_LOGS : [];
+    return this.getItem<AuditLog[]>(key, defaultValue);
   }
 
   public addAuditLog(action: string, entity: string, details: string) {
@@ -743,7 +1122,7 @@ class StorageService {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    
+
     const newLog: AuditLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp,
@@ -754,12 +1133,11 @@ class StorageService {
       details,
     };
 
-    const logs = this.getItem<AuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, SEED_AUDIT_LOGS);
+    const key = this.getScopedKey(STORAGE_KEYS.AUDIT_LOGS);
+    const logs = this.getAuditLogs();
     logs.unshift(newLog);
-    // Keep max 500 logs to prevent bloat
     if (logs.length > 500) logs.pop();
-    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
-    this.notify();
+    this.setItem(key, logs);
   }
 
   // Backup & Restore
